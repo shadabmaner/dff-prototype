@@ -44,13 +44,14 @@ import { Textarea } from "@/components/ui/textarea"
 import { cn } from "@/lib/utils"
 import { usePharmacy } from "@/components/pharmacy/pharmacy-context"
 
-type PrescriptionStatus = "NEW_PRESCRIPTION_RECEIVED" | "UNDER_REVIEW" | "CALCULATING_AMOUNT" | "PAYMENT_PENDING" | "MEDICINES_PACKED" | "READY_FOR_DISPATCH" | "DISPATCHED" | "DELIVERED" | "CANCELLED"
+type PrescriptionStatus = "NEW_PRESCRIPTION_RECEIVED" | "UNDER_REVIEW" | "CALCULATING_AMOUNT" | "PAYMENT_PENDING" | "PENDING_FOR_PACKING" | "MEDICINES_PACKED" | "READY_FOR_DISPATCH" | "DISPATCHED" | "DELIVERED" | "CANCELLED"
 
 const statusLabels: Record<PrescriptionStatus, string> = {
   NEW_PRESCRIPTION_RECEIVED: "New Prescription",
   UNDER_REVIEW: "Under Review",
   CALCULATING_AMOUNT: "Calculating Amount",
   PAYMENT_PENDING: "Payment Pending",
+  PENDING_FOR_PACKING: "Pending for Packing",
   MEDICINES_PACKED: "Medicines Packed",
   READY_FOR_DISPATCH: "Ready for Dispatch",
   DISPATCHED: "Dispatched",
@@ -63,6 +64,7 @@ const statusColors: Record<PrescriptionStatus, string> = {
   UNDER_REVIEW: "bg-amber-100 text-amber-700 border-amber-200",
   CALCULATING_AMOUNT: "bg-purple-100 text-purple-700 border-purple-200",
   PAYMENT_PENDING: "bg-orange-100 text-orange-700 border-orange-200",
+  PENDING_FOR_PACKING: "bg-yellow-100 text-yellow-700 border-yellow-200",
   MEDICINES_PACKED: "bg-cyan-100 text-cyan-700 border-cyan-200",
   READY_FOR_DISPATCH: "bg-emerald-100 text-emerald-700 border-emerald-200",
   DISPATCHED: "bg-indigo-100 text-indigo-700 border-indigo-200",
@@ -75,6 +77,7 @@ const statusOrder: PrescriptionStatus[] = [
   "UNDER_REVIEW",
   "CALCULATING_AMOUNT",
   "PAYMENT_PENDING",
+  "PENDING_FOR_PACKING",
   "MEDICINES_PACKED",
   "READY_FOR_DISPATCH",
   "DISPATCHED",

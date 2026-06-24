@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, use } from "react"
 import { motion } from "framer-motion"
 import {
   ArrowLeft,
@@ -188,7 +188,8 @@ const patientSummary = {
   pendingPayments: 8,
 }
 
-export default function BatchDetailPage({ params }: { params: { id: string } }) {
+export default function BatchDetailPage({ params }: { params: Promise<{ id: string }> }) {
+  const id = use(params)
   const router = useRouter()
   const [searchTerm, setSearchTerm] = useState("")
   const [selectedStatus, setSelectedStatus] = useState<string>("all")

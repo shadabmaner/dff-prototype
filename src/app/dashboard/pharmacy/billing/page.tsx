@@ -55,7 +55,7 @@ const invoiceSchema = z.object({
 type InvoiceValues = z.infer<typeof invoiceSchema>
 
 function CreateInvoiceDialog() {
-  const { generateBill } = usePharmacy()
+  const { generateInvoice } = usePharmacy()
   const [open, setOpen] = React.useState(false)
 
   const form = useForm<InvoiceValues>({
@@ -68,7 +68,16 @@ function CreateInvoiceDialog() {
   })
 
   function onSubmit(values: InvoiceValues) {
-    generateBill(values.prescriptionId, Number(values.amount), values.transactionId)
+    generateInvoice(values.prescriptionId, {
+      medicationCost: Number(values.amount),
+      deliveryCharges: 0,
+      additionalCharges: 0,
+      discount: 0,
+      tax: 0,
+      dueDate: new Date().toISOString().split('T')[0],
+      billingNotes: values.transactionId,
+      generatedBy: "Pharmacy Staff"
+    })
     toast.success("Invoice created")
     setOpen(false)
     form.reset()
@@ -150,14 +159,14 @@ export default function PharmacyBillingPage() {
   const { prescriptions } = usePharmacy()
 
   const invoices = prescriptions
-    .filter((p) => typeof p.amount === "number" && !!p.transactionId)
+    .filter((p) => p.invoice !== null)
     .map((p) => ({
       prescriptionId: p.id,
       patientName: p.patientName,
-      amount: p.amount as number,
-      transactionId: p.transactionId as string,
-      date: p.date,
-      status: p.status,
+      amount: p.invoice!.totalAmount,
+      transactionId: p.invoice!.id,
+      date: p.invoice!.createdAt,
+      status: p.invoice!.status,
     }))
 
   const ledger = React.useMemo(() => {

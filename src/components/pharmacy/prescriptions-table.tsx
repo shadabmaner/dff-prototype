@@ -38,13 +38,16 @@ import {
 
 function statusBadgeVariant(status: PrescriptionStatus) {
   switch (status) {
-    case "NEW":
+    case "NEW_PRESCRIPTION_RECEIVED":
       return "secondary"
-    case "PROCESSING":
+    case "UNDER_REVIEW":
+    case "CALCULATING_AMOUNT":
       return "default"
-    case "READY":
+    case "READY_FOR_DISPATCH":
       return "outline"
     case "DISPATCHED":
+      return "default"
+    default:
       return "default"
   }
 }
@@ -72,7 +75,7 @@ export function PrescriptionsTable({
         header: "Doctor",
       },
       {
-        accessorKey: "date",
+        accessorKey: "prescriptionDate",
         header: "Date",
       },
       {
@@ -90,10 +93,10 @@ export function PrescriptionsTable({
         header: "Billing",
         cell: ({ row }) => {
           const p = row.original
-          if (p.amount && p.transactionId) {
+          if (p.invoice) {
             return (
               <div className="text-sm text-muted-foreground">
-                ₹{p.amount} ({p.transactionId})
+                ₹{p.invoice.totalAmount} ({p.invoice.id})
               </div>
             )
           }
@@ -118,11 +121,14 @@ export function PrescriptionsTable({
                 <DropdownMenuContent align="end">
                   <DropdownMenuLabel>Actions</DropdownMenuLabel>
                   <DropdownMenuSeparator />
-                  <DropdownMenuItem onClick={() => updateStatus(p.id, "PROCESSING")}>
-                    Mark Processing
+                  <DropdownMenuItem onClick={() => updateStatus(p.id, "UNDER_REVIEW")}>
+                    Mark Under Review
                   </DropdownMenuItem>
-                  <DropdownMenuItem onClick={() => updateStatus(p.id, "READY")}>
-                    Mark Ready
+                  <DropdownMenuItem onClick={() => updateStatus(p.id, "CALCULATING_AMOUNT")}>
+                    Calculate Amount
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => updateStatus(p.id, "READY_FOR_DISPATCH")}>
+                    Mark Ready for Dispatch
                   </DropdownMenuItem>
                   <DropdownMenuItem onClick={() => updateStatus(p.id, "DISPATCHED")}>
                     Dispatch

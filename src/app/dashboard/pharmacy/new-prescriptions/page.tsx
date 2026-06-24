@@ -5,7 +5,7 @@ import { PrescriptionsTable } from "@/components/pharmacy/prescriptions-table"
 
 function Content() {
   const { prescriptions } = usePharmacy()
-  const data = prescriptions.filter((p) => p.status === "NEW")
+  const data = prescriptions.filter((p) => p.status === "NEW_PRESCRIPTION_RECEIVED")
 
   return (
     <div className="space-y-5">

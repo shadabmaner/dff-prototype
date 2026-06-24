@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, use } from "react"
 import { motion } from "framer-motion"
 import {
   ArrowLeft,
@@ -98,7 +98,8 @@ const statusColors: Record<PrescriptionStatus, string> = {
   Replaced: "bg-purple-100 text-purple-700 border-purple-200",
 }
 
-export default function PatientPrescriptionHistoryPage({ params }: { params: { patientId: string } }) {
+export default function PatientPrescriptionHistoryPage({ params }: { params: Promise<{ patientId: string }> }) {
+  const patientId = use(params)
   const formatDate = (dateStr: string) => {
     try {
       return new Intl.DateTimeFormat("en-IN", { day: "numeric", month: "short", year: "numeric" }).format(new Date(dateStr))

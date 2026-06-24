@@ -42,7 +42,7 @@ export function GenerateBillDialog({
 }: {
   prescriptionId: string
 }) {
-  const { generateBill } = usePharmacy()
+  const { generateInvoice } = usePharmacy()
   const [open, setOpen] = React.useState(false)
 
   const form = useForm<Values>({
@@ -51,7 +51,16 @@ export function GenerateBillDialog({
   })
 
   function onSubmit(values: Values) {
-    generateBill(prescriptionId, Number(values.amount), values.transactionId)
+    generateInvoice(prescriptionId, {
+      medicationCost: Number(values.amount),
+      deliveryCharges: 0,
+      additionalCharges: 0,
+      discount: 0,
+      tax: 0,
+      dueDate: new Date().toISOString().split('T')[0],
+      billingNotes: values.transactionId,
+      generatedBy: "Pharmacy Staff"
+    })
     toast.success("Bill generated")
     setOpen(false)
     form.reset()

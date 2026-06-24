@@ -6,7 +6,7 @@ import { PrescriptionsTable } from "@/components/pharmacy/prescriptions-table"
 function Content() {
   const { prescriptions } = usePharmacy()
   const data = prescriptions.filter(
-    (p) => p.status === "READY" || p.status === "DISPATCHED"
+    (p) => p.status === "READY_FOR_DISPATCH" || p.status === "DISPATCHED"
   )
 
   return (
