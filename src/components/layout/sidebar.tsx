@@ -169,6 +169,7 @@ const sections: NavSection[] = [
     description: "Clinical cockpit",
     user_type: "doctor",
     items: [
+      { title: "Doctor Management", href: "/dashboard/doctor/doctor-management", icon: UserCog },
       { title: "Dashboard", href: "/dashboard/doctor/dashboard", icon: LayoutDashboard },
       { title: "Appointments", href: "/dashboard/doctor/appointments", icon: Calendar },
       { title: "Referred Patients", href: "/dashboard/doctor/referred-patients", icon: UserPlus },
