@@ -23,6 +23,8 @@ import {
   Calculator,
   Bell,
   ChevronRight,
+  Printer,
+  Eye,
 } from "lucide-react"
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
@@ -82,6 +84,7 @@ export default function PrescriptionDetailPage() {
   const { prescriptions, updateStatus, generateInvoice, updatePaymentStatus } = usePharmacy()
   const [showPaymentDialog, setShowPaymentDialog] = useState(false)
   const [showReminderDialog, setShowReminderDialog] = useState(false)
+  const [showPreviewDialog, setShowPreviewDialog] = useState(false)
   const [paymentMethod, setPaymentMethod] = useState<string>("cash")
   const [paymentAmount, setPaymentAmount] = useState<string>("")
   const [paymentNotes, setPaymentNotes] = useState("")
@@ -195,6 +198,10 @@ export default function PrescriptionDetailPage() {
         <Badge className={cn("text-xs font-semibold border", statusColors[prescription.status as PrescriptionStatus])}>
           {statusLabels[prescription.status as PrescriptionStatus]}
         </Badge>
+        <Button variant="outline" onClick={() => setShowPreviewDialog(true)} className="h-10 px-4">
+          <Eye className="h-4 w-4 mr-2" />
+          View Prescription
+        </Button>
       </div>
 
       <div className="grid gap-6 lg:grid-cols-3">
@@ -578,6 +585,205 @@ export default function PrescriptionDetailPage() {
               Send Reminder
             </Button>
           </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Prescription Preview Dialog */}
+      <Dialog open={showPreviewDialog} onOpenChange={setShowPreviewDialog}>
+        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="text-lg font-bold text-slate-900">Prescription Preview</DialogTitle>
+            <DialogDescription>
+              View prescription with DFF branding and medication color coding
+            </DialogDescription>
+          </DialogHeader>
+          
+          {/* Prescription Letterhead - A4 Format */}
+          <div className="bg-white border-2 border-slate-200 rounded-lg p-8 space-y-6" style={{ aspectRatio: '210/297' }}>
+            {/* Header with DFF Branding */}
+            <div className="border-b-2 border-primary pb-4 bg-gradient-to-r from-blue-50 to-emerald-50 -mx-8 px-8 -mt-8 pt-8 rounded-t-lg">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-4">
+                  <div className="w-16 h-16 bg-gradient-to-br from-blue-600 to-emerald-600 rounded-full flex items-center justify-center">
+                    <span className="text-white font-bold text-2xl">DFF</span>
+                  </div>
+                  <div>
+                    <h2 className="text-2xl font-bold text-slate-900">DFF Healthcare</h2>
+                    <p className="text-sm text-slate-600">Diabetes, Thyroid & Obesity Management</p>
+                    <p className="text-xs text-slate-500 mt-1">123 Healthcare Avenue, Medical District, City - 400001</p>
+                    <p className="text-xs text-slate-500">Phone: +91 1234567890 | Email: info@dffhealthcare.com</p>
+                  </div>
+                </div>
+                <div className="text-right">
+                  <p className="text-sm font-bold text-slate-900">MEDICAL PRESCRIPTION</p>
+                  <p className="text-xs text-slate-500">{prescription.id}</p>
+                  <p className="text-xs text-slate-400 mt-1">{formatDate(prescription.prescriptionDate)}</p>
+                </div>
+              </div>
+            </div>
+
+            {/* Patient Info */}
+            <div className="grid grid-cols-2 gap-4 bg-slate-50 p-4 rounded-lg border border-slate-200">
+              <div>
+                <p className="text-xs text-slate-500 uppercase font-semibold">Patient Name</p>
+                <p className="text-sm font-bold text-slate-900">{prescription.patientName}</p>
+              </div>
+              <div>
+                <p className="text-xs text-slate-500 uppercase font-semibold">Patient ID</p>
+                <p className="text-sm font-medium text-slate-900">{prescription.patientId}</p>
+              </div>
+              <div>
+                <p className="text-xs text-slate-500 uppercase font-semibold">Contact</p>
+                <p className="text-sm font-medium text-slate-900">{prescription.patientContact}</p>
+              </div>
+              <div>
+                <p className="text-xs text-slate-500 uppercase font-semibold">Batch ID</p>
+                <p className="text-sm font-medium text-primary">{prescription.batchId}</p>
+              </div>
+            </div>
+
+            {/* Doctor Notes */}
+            <div>
+              <p className="text-xs text-slate-500 uppercase font-semibold mb-1">Doctor Notes</p>
+              <p className="text-sm font-medium text-slate-900 bg-slate-50 p-3 rounded-lg border border-slate-200">{prescription.doctorNotes || "No notes provided"}</p>
+            </div>
+
+            {/* Medications with Color Coding */}
+            {prescription.medications.length > 0 && (
+              <div>
+                <p className="text-xs text-slate-500 uppercase font-semibold mb-3">Medications</p>
+                
+                {/* DFF Medications Section */}
+                {prescription.medications.filter((m: any) => !m.isCustom).length > 0 && (
+                  <div className="mb-4">
+                    <div className="bg-emerald-50 border-2 border-emerald-300 rounded-lg p-3 mb-2">
+                      <p className="text-xs font-bold text-emerald-800 flex items-center gap-2">
+                        <span className="w-3 h-3 bg-emerald-500 rounded-full"></span>
+                        DFF Pharmacy Medications (Buy from DFF Pharmacy)
+                      </p>
+                    </div>
+                    <div className="space-y-2">
+                      {prescription.medications.filter((m: any) => !m.isCustom).map((med: any, idx: number) => (
+                        <div key={idx} className="bg-emerald-50 border border-emerald-200 rounded-lg p-4">
+                          <div className="flex items-start justify-between mb-2">
+                            <div>
+                              <p className="text-sm font-bold text-slate-900">{idx + 1}. {med.name}</p>
+                              <p className="text-xs text-slate-600">Strength: {med.strength}</p>
+                            </div>
+                            <Badge className="bg-emerald-600 text-white text-xs">{med.frequency}</Badge>
+                          </div>
+                          <div className="grid grid-cols-2 gap-2 text-xs">
+                            <div>
+                              <span className="text-slate-500">Dosage:</span> {med.dosage}
+                            </div>
+                            <div>
+                              <span className="text-slate-500">Quantity:</span> {med.quantity}
+                            </div>
+                            <div>
+                              <span className="text-slate-500">Meal Timing:</span> {med.mealTiming || "As prescribed"}
+                            </div>
+                            <div>
+                              <span className="text-slate-500">Price:</span> ₹{med.price || 0}
+                            </div>
+                          </div>
+                          {med.instructions && (
+                            <div className="mt-2">
+                              <span className="text-slate-500 text-xs">Instructions:</span>
+                              <p className="text-xs text-slate-900">{med.instructions}</p>
+                            </div>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* Other Medications Section */}
+                {prescription.medications.filter((m: any) => m.isCustom).length > 0 && (
+                  <div>
+                    <div className="bg-orange-50 border-2 border-orange-300 rounded-lg p-3 mb-2">
+                      <p className="text-xs font-bold text-orange-800 flex items-center gap-2">
+                        <span className="w-3 h-3 bg-orange-500 rounded-full"></span>
+                        Other Medications (Buy from External Pharmacy)
+                      </p>
+                    </div>
+                    <div className="space-y-2">
+                      {prescription.medications.filter((m: any) => m.isCustom).map((med: any, idx: number) => (
+                        <div key={idx} className="bg-orange-50 border border-orange-200 rounded-lg p-4">
+                          <div className="flex items-start justify-between mb-2">
+                            <div>
+                              <p className="text-sm font-bold text-slate-900">{idx + 1}. {med.name}</p>
+                              <p className="text-xs text-slate-600">Strength: {med.strength || "As prescribed"}</p>
+                            </div>
+                            <Badge className="bg-orange-600 text-white text-xs">{med.frequency}</Badge>
+                          </div>
+                          <div className="grid grid-cols-2 gap-2 text-xs">
+                            <div>
+                              <span className="text-slate-500">Dosage:</span> {med.dosage}
+                            </div>
+                            <div>
+                              <span className="text-slate-500">Quantity:</span> {med.quantity}
+                            </div>
+                            <div>
+                              <span className="text-slate-500">Meal Timing:</span> {med.mealTiming || "As prescribed"}
+                            </div>
+                            <div>
+                              <span className="text-slate-500">Price:</span> ₹{med.price || 0}
+                            </div>
+                          </div>
+                          {med.instructions && (
+                            <div className="mt-2">
+                              <span className="text-slate-500 text-xs">Instructions:</span>
+                              <p className="text-xs text-slate-900">{med.instructions}</p>
+                            </div>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* Important Notice */}
+            <div className="bg-blue-50 border-2 border-blue-300 rounded-lg p-4">
+              <p className="text-xs font-bold text-blue-800 mb-2">⚠️ IMPORTANT NOTICE</p>
+              <ul className="text-xs text-blue-900 space-y-1 list-disc list-inside">
+                <li>Green highlighted medications are available at DFF Pharmacy</li>
+                <li>Orange highlighted medications need to be purchased from external pharmacies</li>
+                <li>Please follow the dosage instructions carefully</li>
+                <li>Complete the full course of medication as prescribed</li>
+              </ul>
+            </div>
+
+            {/* Digital Signature */}
+            <div className="border-t-2 border-primary pt-4 mt-6">
+              <div className="flex items-center justify-between">
+                <div className="text-center">
+                  <div className="w-32 h-16 border-b-2 border-slate-400 mb-2 flex items-end justify-center">
+                    <p className="text-xs text-slate-400 italic">Digital Signature</p>
+                  </div>
+                  <p className="text-sm font-bold text-slate-900">Dr. Bhagyesh Kulkarni</p>
+                  <p className="text-xs text-slate-600">MBBS, MD (General Medicine)</p>
+                  <p className="text-xs text-slate-500">Reg. No: 12345678</p>
+                </div>
+                <div className="text-right">
+                  <p className="text-xs text-slate-500">This prescription is digitally signed</p>
+                  <p className="text-xs text-slate-400">Valid prescription ID: {prescription.id}</p>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div className="flex justify-end gap-3 pt-4 border-t border-slate-100">
+            <Button variant="outline" onClick={() => setShowPreviewDialog(false)} className="h-10 px-6 rounded-xl border-slate-200">
+              Close
+            </Button>
+            <Button variant="outline" className="h-10 px-6 rounded-xl border-slate-200">
+              <Printer className="h-4 w-4 mr-2" />
+              Print
+            </Button>
+          </div>
         </DialogContent>
       </Dialog>
     </div>

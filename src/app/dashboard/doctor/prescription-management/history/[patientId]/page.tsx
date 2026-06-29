@@ -1,6 +1,7 @@
 "use client"
 
 import { useState, use } from "react"
+import { useRouter } from "next/navigation"
 import { motion } from "framer-motion"
 import {
   ArrowLeft,
@@ -100,12 +101,17 @@ const statusColors: Record<PrescriptionStatus, string> = {
 
 export default function PatientPrescriptionHistoryPage({ params }: { params: Promise<{ patientId: string }> }) {
   const patientId = use(params)
+  const router = useRouter()
   const formatDate = (dateStr: string) => {
     try {
       return new Intl.DateTimeFormat("en-IN", { day: "numeric", month: "short", year: "numeric" }).format(new Date(dateStr))
     } catch {
       return dateStr
     }
+  }
+
+  const handleViewDetails = (prescriptionId: string) => {
+    router.push(`/dashboard/doctor/prescription-management/view/${prescriptionId}`)
   }
 
   return (
@@ -270,7 +276,7 @@ export default function PatientPrescriptionHistoryPage({ params }: { params: Pro
                       </div>
 
                       <div className="flex items-center justify-between pt-4 border-t border-slate-100">
-                        <Button variant="outline" size="sm" className="h-9 px-4 rounded-lg text-xs">
+                        <Button variant="outline" size="sm" className="h-9 px-4 rounded-lg text-xs" onClick={() => handleViewDetails(prescription.id)}>
                           <Eye className="h-3 w-3 mr-2" />
                           View Details
                         </Button>

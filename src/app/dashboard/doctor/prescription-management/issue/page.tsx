@@ -74,6 +74,7 @@ interface Medication {
   mealTiming: MealTiming
   instructions: string
   reminderRequired: boolean
+  isCustom: boolean
 }
 
 // Mock Data
@@ -142,6 +143,8 @@ export default function IssuePrescriptionPage() {
   const [medicationSearch, setMedicationSearch] = useState("")
   const [showMedicationDropdown, setShowMedicationDropdown] = useState(false)
   const [selectedMedication, setSelectedMedication] = useState("")
+  const [showCustomMedicationInput, setShowCustomMedicationInput] = useState(false)
+  const [customMedicationName, setCustomMedicationName] = useState("")
   const [showMedicationDialog, setShowMedicationDialog] = useState(false)
   const [editingMedication, setEditingMedication] = useState<Medication | null>(null)
   const [showPreviewDialog, setShowPreviewDialog] = useState(false)
@@ -242,16 +245,19 @@ export default function IssuePrescriptionPage() {
     }, 2000)
   }
 
-  const addMedication = (medication: typeof medicationMaster[0]) => {
-    if (medications.some((m) => m.name === medication.name)) {
+  const addMedication = (medication: typeof medicationMaster[0] | { name: string; isCustom: boolean; custom?: boolean }) => {
+    const medicationName = medication.name
+    const isCustomMed = 'isCustom' in medication && medication.isCustom
+    
+    if (medications.some((m) => m.name === medicationName)) {
       alert("This medication has already been added.")
       return
     }
 
     const newMedication: Medication = {
       id: Date.now().toString(),
-      name: medication.name,
-      strength: medication.name.split(" ").pop() || "",
+      name: medicationName,
+      strength: !isCustomMed && 'name' in medication ? medicationName.split(" ").pop() || "" : "",
       dosage: "1 Tablet",
       frequency: "BD",
       duration: "30",
@@ -259,12 +265,15 @@ export default function IssuePrescriptionPage() {
       mealTiming: "After Breakfast",
       instructions: "",
       reminderRequired: true,
+      isCustom: isCustomMed,
     }
 
     setEditingMedication(newMedication)
     setShowMedicationDialog(true)
     setMedicationSearch("")
     setShowMedicationDropdown(false)
+    setShowCustomMedicationInput(false)
+    setCustomMedicationName("")
   }
 
   const openEditDialog = (medication: Medication) => {
@@ -667,22 +676,81 @@ export default function IssuePrescriptionPage() {
                 >
                   {isRecording && activeField === 'medication' ? <MicOff className="h-4 w-4" /> : <Mic className="h-4 w-4" />}
                 </Button>
-                {showMedicationDropdown && medicationSearch && (
+                {showMedicationDropdown && (
                   <div className="absolute top-full left-0 right-0 mt-1 bg-white border border-slate-200 rounded-xl shadow-lg max-h-60 overflow-y-auto z-50">
                     {filteredMedications.length > 0 ? (
-                      filteredMedications.map((med) => (
+                      <>
+                        {filteredMedications.map((med) => (
+                          <div
+                            key={med.id}
+                            onClick={() => addMedication(med)}
+                            className="px-4 py-3 hover:bg-slate-50 cursor-pointer border-b border-slate-100 last:border-0"
+                          >
+                            <p className="text-sm font-medium text-slate-900">{med.name}</p>
+                            <p className="text-xs text-slate-500">Generic: {med.generic} | Brand: {med.brand}</p>
+                          </div>
+                        ))}
                         <div
-                          key={med.id}
-                          onClick={() => addMedication(med)}
-                          className="px-4 py-3 hover:bg-slate-50 cursor-pointer border-b border-slate-100 last:border-0"
+                          onClick={() => {
+                            setShowCustomMedicationInput(true)
+                            setShowMedicationDropdown(false)
+                          }}
+                          className="px-4 py-3 hover:bg-slate-50 cursor-pointer border-b border-slate-100 last:border-0 bg-blue-50"
                         >
-                          <p className="text-sm font-medium text-slate-900">{med.name}</p>
-                          <p className="text-xs text-slate-500">Generic: {med.generic} | Brand: {med.brand}</p>
+                          <p className="text-sm font-medium text-primary">+ Add Other/Custom Medication</p>
+                          <p className="text-xs text-slate-500">Medication not in DFF pharmacy list</p>
                         </div>
-                      ))
+                      </>
                     ) : (
-                      <div className="px-4 py-3 text-sm text-slate-500">No medications found</div>
+                      <div className="px-4 py-3 text-sm text-slate-500">
+                        No medications found
+                        <div
+                          onClick={() => {
+                            setShowCustomMedicationInput(true)
+                            setShowMedicationDropdown(false)
+                          }}
+                          className="mt-2 px-4 py-2 hover:bg-slate-50 cursor-pointer border border-slate-200 rounded-lg bg-blue-50"
+                        >
+                          <p className="text-sm font-medium text-primary">+ Add Other/Custom Medication</p>
+                        </div>
+                      </div>
                     )}
+                  </div>
+                )}
+
+                {showCustomMedicationInput && (
+                  <div className="mt-2 p-4 bg-blue-50 border border-blue-200 rounded-xl">
+                    <Label className="text-sm font-medium text-slate-700">Enter Custom Medication Name</Label>
+                    <Input
+                      placeholder="Enter medication name (e.g., Amoxicillin 500mg)"
+                      value={customMedicationName}
+                      onChange={(e) => setCustomMedicationName(e.target.value)}
+                      className="mt-2 h-10 rounded-xl border-slate-200"
+                    />
+                    <div className="flex gap-2 mt-3">
+                      <Button
+                        size="sm"
+                        onClick={() => {
+                          if (customMedicationName.trim()) {
+                            addMedication({ name: customMedicationName.trim(), isCustom: true })
+                          }
+                        }}
+                        className="h-8 rounded-lg bg-primary text-white hover:bg-primary/90"
+                      >
+                        Add Medication
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => {
+                          setShowCustomMedicationInput(false)
+                          setCustomMedicationName("")
+                        }}
+                        className="h-8 rounded-lg"
+                      >
+                        Cancel
+                      </Button>
+                    </div>
                   </div>
                 )}
               </div>
@@ -987,107 +1055,181 @@ export default function IssuePrescriptionPage() {
                 </DialogDescription>
               </DialogHeader>
               
-              {/* Prescription Letterhead */}
-              <div className="bg-white border-2 border-slate-200 rounded-lg p-8 space-y-6">
-                {/* Header */}
-                <div className="border-b-2 border-slate-800 pb-4">
+              {/* Prescription Letterhead - A4 Format */}
+              <div className="bg-white border-2 border-slate-200 rounded-lg p-8 space-y-6" style={{ aspectRatio: '210/297' }}>
+                {/* Header with DFF Branding */}
+                <div className="border-b-2 border-primary pb-4 bg-gradient-to-r from-blue-50 to-emerald-50 -mx-8 px-8 -mt-8 pt-8 rounded-t-lg">
                   <div className="flex items-center justify-between">
-                    <div>
-                      <h2 className="text-2xl font-bold text-slate-900">DFF Healthcare Clinic</h2>
-                      <p className="text-sm text-slate-600">Diabetes, Thyroid & Obesity Management</p>
-                      <p className="text-xs text-slate-500 mt-1">123 Healthcare Avenue, Medical District, City - 400001</p>
-                      <p className="text-xs text-slate-500">Phone: +91 1234567890 | Email: info@dffhealthcare.com</p>
+                    <div className="flex items-center gap-4">
+                      <div className="w-16 h-16 bg-gradient-to-br from-blue-600 to-emerald-600 rounded-full flex items-center justify-center">
+                        <span className="text-white font-bold text-2xl">DFF</span>
+                      </div>
+                      <div>
+                        <h2 className="text-2xl font-bold text-slate-900">DFF Healthcare</h2>
+                        <p className="text-sm text-slate-600">Diabetes, Thyroid & Obesity Management</p>
+                        <p className="text-xs text-slate-500 mt-1">123 Healthcare Avenue, Medical District, City - 400001</p>
+                        <p className="text-xs text-slate-500">Phone: +91 1234567890 | Email: info@dffhealthcare.com</p>
+                      </div>
                     </div>
                     <div className="text-right">
-                      <p className="text-sm font-bold text-slate-900">PRESCRIPTION</p>
+                      <p className="text-sm font-bold text-slate-900">MEDICAL PRESCRIPTION</p>
                       <p className="text-xs text-slate-500">RX-2026-{medications.length + 1}</p>
+                      <p className="text-xs text-slate-400 mt-1">{new Date().toLocaleDateString('en-IN', { day: 'numeric', month: 'long', year: 'numeric' })}</p>
                     </div>
                   </div>
                 </div>
 
                 {/* Patient Info */}
-                <div className="grid grid-cols-2 gap-4 bg-slate-50 p-4 rounded-lg">
+                <div className="grid grid-cols-2 gap-4 bg-slate-50 p-4 rounded-lg border border-slate-200">
                   <div>
-                    <p className="text-xs text-slate-500 uppercase">Patient Name</p>
+                    <p className="text-xs text-slate-500 uppercase font-semibold">Patient Name</p>
                     <p className="text-sm font-bold text-slate-900">{mockPatient.name}</p>
                   </div>
                   <div>
-                    <p className="text-xs text-slate-500 uppercase">Patient ID</p>
+                    <p className="text-xs text-slate-500 uppercase font-semibold">Patient ID</p>
                     <p className="text-sm font-medium text-slate-900">{mockPatient.patientId}</p>
                   </div>
                   <div>
-                    <p className="text-xs text-slate-500 uppercase">Age/Gender</p>
+                    <p className="text-xs text-slate-500 uppercase font-semibold">Age/Gender</p>
                     <p className="text-sm font-medium text-slate-900">{mockPatient.age} years / {mockPatient.gender}</p>
                   </div>
                   <div>
-                    <p className="text-xs text-slate-500 uppercase">Date</p>
-                    <p className="text-sm font-medium text-slate-900">{new Date().toLocaleDateString('en-IN', { day: 'numeric', month: 'long', year: 'numeric' })}</p>
+                    <p className="text-xs text-slate-500 uppercase font-semibold">Program</p>
+                    <p className="text-sm font-medium text-primary">{mockPatient.program}</p>
                   </div>
                 </div>
 
                 {/* Diagnosis */}
                 <div>
-                  <p className="text-xs text-slate-500 uppercase mb-1">Diagnosis</p>
-                  <p className="text-sm font-medium text-slate-900">{diagnosis || "Not specified"}</p>
+                  <p className="text-xs text-slate-500 uppercase font-semibold mb-1">Diagnosis</p>
+                  <p className="text-sm font-medium text-slate-900 bg-slate-50 p-3 rounded-lg border border-slate-200">{diagnosis || "Not specified"}</p>
                 </div>
 
-                {/* Medications */}
+                {/* Medications with Color Coding */}
                 {medications.length > 0 && (
                   <div>
-                    <p className="text-xs text-slate-500 uppercase mb-3">Medications</p>
-                    <div className="space-y-3">
-                      {medications.map((med, idx) => (
-                        <div key={med.id} className="border border-slate-200 rounded-lg p-4">
-                          <div className="flex items-start justify-between mb-2">
-                            <div>
-                              <p className="text-sm font-bold text-slate-900">{idx + 1}. {med.name}</p>
-                              <p className="text-xs text-slate-600">Strength: {med.strength}</p>
-                            </div>
-                            <Badge className="bg-primary text-white text-xs">{frequencyOptions.find(f => f.value === med.frequency)?.label}</Badge>
-                          </div>
-                          <div className="grid grid-cols-2 gap-2 text-xs">
-                            <div>
-                              <span className="text-slate-500">Dosage:</span> {med.dosage}
-                            </div>
-                            <div>
-                              <span className="text-slate-500">Duration:</span> {med.duration} {med.durationUnit}
-                            </div>
-                            <div>
-                              <span className="text-slate-500">Meal Timing:</span> {med.mealTiming}
-                            </div>
-                            <div>
-                              <span className="text-slate-500">Reminder:</span> {med.reminderRequired ? "Yes" : "No"}
-                            </div>
-                          </div>
-                          {med.instructions && (
-                            <div className="mt-2">
-                              <span className="text-slate-500 text-xs">Instructions:</span>
-                              <p className="text-xs text-slate-900">{med.instructions}</p>
-                            </div>
-                          )}
+                    <p className="text-xs text-slate-500 uppercase font-semibold mb-3">Medications</p>
+                    
+                    {/* DFF Medications Section */}
+                    {medications.filter(m => !m.isCustom).length > 0 && (
+                      <div className="mb-4">
+                        <div className="bg-emerald-50 border-2 border-emerald-300 rounded-lg p-3 mb-2">
+                          <p className="text-xs font-bold text-emerald-800 flex items-center gap-2">
+                            <span className="w-3 h-3 bg-emerald-500 rounded-full"></span>
+                            DFF Pharmacy Medications (Buy from DFF Pharmacy)
+                          </p>
                         </div>
-                      ))}
-                    </div>
+                        <div className="space-y-2">
+                          {medications.filter(m => !m.isCustom).map((med, idx) => (
+                            <div key={med.id} className="bg-emerald-50 border border-emerald-200 rounded-lg p-4">
+                              <div className="flex items-start justify-between mb-2">
+                                <div>
+                                  <p className="text-sm font-bold text-slate-900">{idx + 1}. {med.name}</p>
+                                  <p className="text-xs text-slate-600">Strength: {med.strength}</p>
+                                </div>
+                                <Badge className="bg-emerald-600 text-white text-xs">{frequencyOptions.find(f => f.value === med.frequency)?.label}</Badge>
+                              </div>
+                              <div className="grid grid-cols-2 gap-2 text-xs">
+                                <div>
+                                  <span className="text-slate-500">Dosage:</span> {med.dosage}
+                                </div>
+                                <div>
+                                  <span className="text-slate-500">Duration:</span> {med.duration} {med.durationUnit}
+                                </div>
+                                <div>
+                                  <span className="text-slate-500">Meal Timing:</span> {med.mealTiming}
+                                </div>
+                                <div>
+                                  <span className="text-slate-500">Reminder:</span> {med.reminderRequired ? "Yes" : "No"}
+                                </div>
+                              </div>
+                              {med.instructions && (
+                                <div className="mt-2">
+                                  <span className="text-slate-500 text-xs">Instructions:</span>
+                                  <p className="text-xs text-slate-900">{med.instructions}</p>
+                                </div>
+                              )}
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Other Medications Section */}
+                    {medications.filter(m => m.isCustom).length > 0 && (
+                      <div>
+                        <div className="bg-orange-50 border-2 border-orange-300 rounded-lg p-3 mb-2">
+                          <p className="text-xs font-bold text-orange-800 flex items-center gap-2">
+                            <span className="w-3 h-3 bg-orange-500 rounded-full"></span>
+                            Other Medications (Buy from External Pharmacy)
+                          </p>
+                        </div>
+                        <div className="space-y-2">
+                          {medications.filter(m => m.isCustom).map((med, idx) => (
+                            <div key={med.id} className="bg-orange-50 border border-orange-200 rounded-lg p-4">
+                              <div className="flex items-start justify-between mb-2">
+                                <div>
+                                  <p className="text-sm font-bold text-slate-900">{idx + 1}. {med.name}</p>
+                                  <p className="text-xs text-slate-600">Strength: {med.strength || "As prescribed"}</p>
+                                </div>
+                                <Badge className="bg-orange-600 text-white text-xs">{frequencyOptions.find(f => f.value === med.frequency)?.label}</Badge>
+                              </div>
+                              <div className="grid grid-cols-2 gap-2 text-xs">
+                                <div>
+                                  <span className="text-slate-500">Dosage:</span> {med.dosage}
+                                </div>
+                                <div>
+                                  <span className="text-slate-500">Duration:</span> {med.duration} {med.durationUnit}
+                                </div>
+                                <div>
+                                  <span className="text-slate-500">Meal Timing:</span> {med.mealTiming}
+                                </div>
+                                <div>
+                                  <span className="text-slate-500">Reminder:</span> {med.reminderRequired ? "Yes" : "No"}
+                                </div>
+                              </div>
+                              {med.instructions && (
+                                <div className="mt-2">
+                                  <span className="text-slate-500 text-xs">Instructions:</span>
+                                  <p className="text-xs text-slate-900">{med.instructions}</p>
+                                </div>
+                              )}
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
                   </div>
                 )}
 
                 {/* Clinical Notes */}
                 <div>
-                  <p className="text-xs text-slate-500 uppercase mb-1">Clinical Notes</p>
-                  <p className="text-sm text-slate-900">{clinicalFindings || consultationNotes || "No clinical notes provided"}</p>
+                  <p className="text-xs text-slate-500 uppercase font-semibold mb-1">Clinical Notes</p>
+                  <p className="text-sm text-slate-900 bg-slate-50 p-3 rounded-lg border border-slate-200">{clinicalFindings || consultationNotes || "No clinical notes provided"}</p>
                 </div>
 
                 {/* Follow-up */}
                 {followUpDate && (
                   <div>
-                    <p className="text-xs text-slate-500 uppercase mb-1">Follow-up Date</p>
-                    <p className="text-sm font-medium text-slate-900">{new Date(followUpDate).toLocaleDateString('en-IN', { day: 'numeric', month: 'long', year: 'numeric' })}</p>
+                    <p className="text-xs text-slate-500 uppercase font-semibold mb-1">Follow-up Date</p>
+                    <p className="text-sm font-medium text-slate-900 bg-slate-50 p-3 rounded-lg border border-slate-200">{new Date(followUpDate).toLocaleDateString('en-IN', { day: 'numeric', month: 'long', year: 'numeric' })}</p>
                     {followUpRemarks && <p className="text-xs text-slate-600 mt-1">{followUpRemarks}</p>}
                   </div>
                 )}
 
+                {/* Important Notice */}
+                <div className="bg-blue-50 border-2 border-blue-300 rounded-lg p-4">
+                  <p className="text-xs font-bold text-blue-800 mb-2">⚠️ IMPORTANT NOTICE</p>
+                  <ul className="text-xs text-blue-900 space-y-1 list-disc list-inside">
+                    <li>Green highlighted medications are available at DFF Pharmacy</li>
+                    <li>Orange highlighted medications need to be purchased from external pharmacies</li>
+                    <li>Please follow the dosage instructions carefully</li>
+                    <li>Complete the full course of medication as prescribed</li>
+                  </ul>
+                </div>
+
                 {/* Digital Signature */}
-                <div className="border-t-2 border-slate-800 pt-4 mt-6">
+                <div className="border-t-2 border-primary pt-4 mt-6">
                   <div className="flex items-center justify-between">
                     <div className="text-center">
                       <div className="w-32 h-16 border-b-2 border-slate-400 mb-2 flex items-end justify-center">
