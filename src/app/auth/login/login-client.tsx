@@ -40,6 +40,7 @@ const demo = [
   { label: "Pharmacy", email: "pharmacy@example.com", password: "pharmacy123", initials: "PH" },
   { label: "Pharmacy New", email: "pharmacynew@drapp.com", password: "StrongP@ss1", initials: "PN" },
   { label: "Physio", email: "physio@example.com", password: "physio123", initials: "PS" },
+  { label: "Mindset Coach", email: "mindset@drapp.com", password: "strongP@SS1", initials: "MC" },
 ];
 
 const LoginClient = ({ next }: { next: string }) => {

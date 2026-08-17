@@ -65,6 +65,9 @@ export function useLogin(redirectTo: string = "/dashboard") {
                         case "fitness_coach":
                             target = "/dashboard/fitness-coach/dashboard";
                             break;
+                        case "mindset_coach":
+                            target = "/dashboard/mindset-coach/dashboard";
+                            break;
                         case "finance":
                             target = "/dashboard/finance/dashboard";
                             break;

@@ -215,6 +215,21 @@ const sections: NavSection[] = [
     ],
   },
   {
+    label: "Mindset Coach",
+    description: "Mental wellness",
+    user_type: "mindset_coach",
+    items: [
+      { title: "Dashboard", href: "/dashboard/mindset-coach/dashboard", icon: LayoutDashboard },
+      { title: "Mindset Management", href: "/dashboard/mindset-coach/mindset-management/activities", icon: Brain },
+      { title: "Activity Assignments", href: "/dashboard/mindset-coach/mindset-management/assignments", icon: ClipboardCheck },
+      { title: "Patient Management", href: "/dashboard/mindset-coach/patients", icon: Users },
+      { title: "Consultation", href: "/dashboard/mindset-coach/consultation", icon: MessageSquare },
+      { title: "Appointments", href: "/dashboard/mindset-coach/appointments", icon: Calendar },
+      { title: "Messages", href: "/dashboard/mindset-coach/messages", icon: MessageSquare },
+      { title: "Availability", href: "/dashboard/mindset-coach/availability", icon: Clock },
+    ],
+  },
+  {
     label: "Pharmacy",
     description: "Medication management",
     user_type: "pharmacist",
