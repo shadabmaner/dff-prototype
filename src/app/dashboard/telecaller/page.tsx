@@ -10,6 +10,7 @@ import { Skeleton } from "@/components/ui/skeleton"
 import { Button } from "@/components/ui/button"
 import { useTelecallerDashboard, type TelecallerDashboardPayload } from "@/hooks/use-telecaller-dashboard"
 import { StatCard } from "@/components/ui/stat-card"
+import { SalesRecoveryOverview } from "@/components/sales/sales-recovery-overview"
 
 type MetricConfig = {
   key: keyof TelecallerDashboardPayload
@@ -128,6 +129,8 @@ export default function TelecallerDashboardPage() {
           )
         })}
       </div>
+
+      <SalesRecoveryOverview title="Payment Recovery" />
 
       {/* Recent Activity */}
       <Card className="border border-slate-200/80 bg-white/80 backdrop-blur-sm shadow-lg overflow-hidden">

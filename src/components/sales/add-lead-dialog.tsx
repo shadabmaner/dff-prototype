@@ -6,6 +6,7 @@ import { apiClient } from "@/lib/api-client"
 import { toast } from "sonner"
 import { useLanguages } from "@/hooks/use-languages"
 import { useSpecialitiesQuery } from "@/hooks/use-specialities"
+import { SALES_LEAD_SOURCES, SALES_SPECIALTIES } from "@/lib/sales/lead-assignment-constants"
 import { useWorkflowPrograms } from "@/hooks/use-workflow-programs"
 
 import { Button } from "@/components/ui/button"
@@ -33,21 +34,8 @@ const campaigns = [
   "Email Campaign - Nutrition",
 ]
 
-const sources = [
-  { value: "website", label: "Website" },
-  { value: "referral", label: "Referral" },
-  { value: "campaign", label: "Campaign" },
-  { value: "event", label: "Event" },
-  { value: "walk_in", label: "Walk-in" },
-  { value: "social_media", label: "Social Media" },
-]
-
 const priorityOptions: Priority[] = ["low", "medium", "high"]
-const quickSources = [
-  { value: "website", label: "Website" },
-  { value: "referral", label: "Referral" },
-  { value: "campaign", label: "Campaign" },
-]
+const quickSources = SALES_LEAD_SOURCES.slice(0, 3)
 
 const sectionCardStyles = "rounded-3xl border border-white/40 bg-white/80 p-5 shadow-[0_25px_60px_rgba(15,23,42,0.08)]"
 const sectionLabelStyles = "text-[11px] font-black uppercase tracking-widest text-slate-500"
@@ -72,6 +60,21 @@ export function AddLeadDialog({ open, onOpenChange, onSuccess }: AddLeadDialogPr
     specialty: "",
     mode: "online"
   })
+
+  const specialtyOptions = React.useMemo(() => {
+    const options: Array<{ id: string; name: string }> = SALES_SPECIALTIES.map((name, index) => ({
+      id: `sales-specialty-${index}`,
+      name,
+    }))
+
+    specialitiesData?.data?.forEach((speciality) => {
+      if (!options.some((option) => option.name.toLowerCase() === speciality.name.toLowerCase())) {
+        options.push({ id: speciality.id, name: speciality.name })
+      }
+    })
+
+    return options
+  }, [specialitiesData])
 
   const handleInputChange = (field: string, value: string) => {
     setFormData(prev => ({ ...prev, [field]: value }))
@@ -248,7 +251,7 @@ export function AddLeadDialog({ open, onOpenChange, onSuccess }: AddLeadDialogPr
                   <SelectValue placeholder="Select source" />
                 </SelectTrigger>
                 <SelectContent>
-                  {sources.map((source) => (
+                  {SALES_LEAD_SOURCES.map((source) => (
                     <SelectItem key={source.value} value={source.value}>
                       {source.label}
                     </SelectItem>
@@ -306,7 +309,7 @@ export function AddLeadDialog({ open, onOpenChange, onSuccess }: AddLeadDialogPr
                     <SelectValue placeholder="Select speciality" />
                   </SelectTrigger>
                   <SelectContent>
-                    {specialitiesData?.data?.map((speciality) => (
+                    {specialtyOptions.map((speciality) => (
                       <SelectItem key={speciality.id} value={speciality.id}>
                         {speciality.name}
                       </SelectItem>

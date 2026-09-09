@@ -1,6 +1,7 @@
 import { useQuery, keepPreviousData } from "@tanstack/react-query"
 import { apiClient } from "@/lib/api-client"
 import type { Lead } from "@/components/sales/types"
+import { enrichLeadForDisplay } from "@/lib/sales/enrich-lead-display"
 
 // API response type
 interface ApiLead {
@@ -164,7 +165,7 @@ export function useUnassignedLeads(options?: {
       }
 
       return {
-        leads: data.data.map(transformApiLead),
+        leads: data.data.map((apiLead) => enrichLeadForDisplay(transformApiLead(apiLead))),
         meta: data.meta
       }
     },

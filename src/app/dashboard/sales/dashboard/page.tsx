@@ -45,6 +45,7 @@ import { Progress } from "@/components/ui/progress"
 import { cn } from "@/lib/utils"
 import { useSalesDashboardKpi } from "@/hooks/use-sales-dashboard"
 import { StatCard } from "@/components/ui/stat-card"
+import { SalesRecoveryOverview } from "@/components/sales/sales-recovery-overview"
 
 const container = {
   hidden: { opacity: 0 },
@@ -322,6 +323,8 @@ export default function SalesDashboardPage() {
           )
         })}
       </div>
+
+      <SalesRecoveryOverview leads={leads} />
 
       {/* Charts row */}
       <div className="grid gap-6 lg:grid-cols-2">

@@ -2,15 +2,25 @@
 
 import * as React from "react"
 import Link from "next/link"
+import { useRouter } from "next/navigation"
+import {
+  ArrowRight,
+  Mail,
+  Phone,
+  RefreshCw,
+  Search,
+  Users,
+} from "lucide-react"
 
 import { Telecaller } from "@/hooks/use-telecallers"
+import { useUpdateTelecallerStatus } from "@/hooks/use-update-telecaller-status"
 import { Input } from "@/components/ui/input"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Card } from "@/components/ui/card"
-import { Search, RefreshCw, Phone, Mail } from "lucide-react"
+import { Switch } from "@/components/ui/switch"
 
 interface TelecallersTableProps {
   data: Telecaller[]
@@ -31,14 +41,20 @@ function getInitials(name?: string) {
 }
 
 export function TelecallersTable({ data, onRefresh, isRefreshing }: TelecallersTableProps) {
+  const router = useRouter()
   const [searchTerm, setSearchTerm] = React.useState("")
   const [statusFilter, setStatusFilter] = React.useState<"all" | "active" | "inactive">("all")
+  const updateStatus = useUpdateTelecallerStatus()
 
   const filteredData = React.useMemo(() => {
     return data
       .filter((telecaller) => {
         const matchesStatus =
-          statusFilter === "all" ? true : statusFilter === "active" ? telecaller.is_active !== false : telecaller.is_active === false
+          statusFilter === "all"
+            ? true
+            : statusFilter === "active"
+              ? telecaller.is_active !== false
+              : telecaller.is_active === false
 
         const term = searchTerm.trim().toLowerCase()
         const matchesSearch = term
@@ -51,6 +67,13 @@ export function TelecallersTable({ data, onRefresh, isRefreshing }: TelecallersT
       })
       .sort((a, b) => (a.name || "").localeCompare(b.name || ""))
   }, [data, searchTerm, statusFilter])
+
+  const handleStatusToggle = (telecaller: Telecaller, checked: boolean) => {
+    updateStatus.mutate({
+      telecallerId: telecaller.id,
+      isActive: checked,
+    })
+  }
 
   return (
     <div className="space-y-4">
@@ -65,7 +88,7 @@ export function TelecallersTable({ data, onRefresh, isRefreshing }: TelecallersT
               className="h-11 rounded-xl border-slate-200 pl-9 text-sm"
             />
           </div>
-          {/* <Select value={statusFilter} onValueChange={(value: "all" | "active" | "inactive") => setStatusFilter(value)}>
+          <Select value={statusFilter} onValueChange={(value: "all" | "active" | "inactive") => setStatusFilter(value)}>
             <SelectTrigger className="h-11 w-full rounded-xl border-slate-200 text-sm md:w-[180px]">
               <SelectValue placeholder="Status" />
             </SelectTrigger>
@@ -74,7 +97,7 @@ export function TelecallersTable({ data, onRefresh, isRefreshing }: TelecallersT
               <SelectItem value="active">Active</SelectItem>
               <SelectItem value="inactive">Inactive</SelectItem>
             </SelectContent>
-          </Select> */}
+          </Select>
           {onRefresh ? (
             <Button
               variant="outline"
@@ -90,18 +113,18 @@ export function TelecallersTable({ data, onRefresh, isRefreshing }: TelecallersT
       </Card>
 
       <Card className="overflow-hidden rounded-[28px] border border-white/60 bg-white/95 shadow-[0_30px_70px_rgba(15,23,42,0.12)]">
-        <div className="border-b border-slate-100/80 bg-slate-50/70 px-6 py-4">
-          
-        </div>
         <div className="max-h-[70vh] overflow-auto">
           <Table>
             <TableHeader>
               <TableRow className="border-b border-slate-100/80 bg-slate-50/40 hover:bg-slate-50/40">
-                <TableHead className="px-4 py-4 text-[10px] font-black uppercase tracking-[0.28em] text-slate-400 first:pl-6 last:pr-6">Telecaller</TableHead>
-                <TableHead className="px-4 py-4 text-[10px] font-black uppercase tracking-[0.28em] text-slate-400 first:pl-6 last:pr-6">Phone</TableHead>
-                <TableHead className="px-4 py-4 text-[10px] font-black uppercase tracking-[0.28em] text-slate-400 first:pl-6 last:pr-6">Email</TableHead>
-                {/* <TableHead className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">Status</TableHead>
-                <TableHead className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground text-right">Actions</TableHead> */}
+                <TableHead className="px-4 py-4 text-[10px] font-black uppercase tracking-[0.28em] text-slate-400 first:pl-6">Telecaller</TableHead>
+                <TableHead className="px-4 py-4 text-[10px] font-black uppercase tracking-[0.28em] text-slate-400">Contact</TableHead>
+                <TableHead className="px-4 py-4 text-[10px] font-black uppercase tracking-[0.28em] text-slate-400">Status</TableHead>
+                <TableHead className="px-4 py-4 text-[10px] font-black uppercase tracking-[0.28em] text-slate-400 text-center">Patients</TableHead>
+                <TableHead className="px-4 py-4 text-[10px] font-black uppercase tracking-[0.28em] text-slate-400 text-center">Total Calls</TableHead>
+                <TableHead className="px-4 py-4 text-[10px] font-black uppercase tracking-[0.28em] text-slate-400 text-center">Contacted</TableHead>
+                <TableHead className="px-4 py-4 text-[10px] font-black uppercase tracking-[0.28em] text-slate-400 text-center">Conversions</TableHead>
+                <TableHead className="px-4 py-4 text-[10px] font-black uppercase tracking-[0.28em] text-slate-400 text-right last:pr-6">Patient List</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -109,73 +132,98 @@ export function TelecallersTable({ data, onRefresh, isRefreshing }: TelecallersT
                 filteredData.map((telecaller) => {
                   const statusKey = telecaller.is_active === false ? "inactive" : "active"
                   const status = statusConfig[statusKey]
+                  const isActive = telecaller.is_active !== false
 
                   return (
-                    <TableRow key={telecaller.id} className="border-b border-slate-100/70 transition-colors hover:bg-primary/5/40">
-                      <TableCell className="px-4 py-4 align-middle first:pl-6 last:pr-6">
+                    <TableRow
+                      key={telecaller.id}
+                      className="border-b border-slate-100/70 transition-colors hover:bg-primary/5 cursor-pointer"
+                      onClick={() => router.push(`/dashboard/sales/telecallers/${telecaller.id}`)}
+                    >
+                      <TableCell className="px-4 py-4 align-middle first:pl-6">
                         <div className="flex items-center gap-3">
                           <div className="flex h-10 w-10 items-center justify-center rounded-full bg-primary/10 text-sm font-semibold text-primary">
                             {getInitials(telecaller.name)}
                           </div>
                           <div>
-                            <div className="text-sm font-semibold text-foreground">
+                            <Link
+                              href={`/dashboard/sales/telecallers/${telecaller.id}`}
+                              className="text-sm font-semibold text-foreground hover:underline"
+                              onClick={(event) => event.stopPropagation()}
+                            >
                               {telecaller.name || "Unnamed Telecaller"}
-                            </div>
-                            {/* <div className="text-xs text-muted-foreground font-mono">{telecaller.id}</div> */}
+                            </Link>
+                            <p className="text-xs text-muted-foreground">
+                              {telecaller.conversionRate?.toFixed(1)}% conversion rate
+                            </p>
                           </div>
                         </div>
                       </TableCell>
-                      <TableCell className="px-4 py-4 align-middle first:pl-6 last:pr-6">
-                        <div className="flex items-center gap-1.5 text-sm text-foreground">
-                          <Phone className="h-3.5 w-3.5 text-muted-foreground" />
-                          {telecaller.phone ? (
-                            <Link href={`tel:${telecaller.phone}`} className="font-medium hover:underline">
-                              {telecaller.phone}
-                            </Link>
-                          ) : (
-                            <span className="text-muted-foreground/70">No phone</span>
-                          )}
+                      <TableCell className="px-4 py-4 align-middle">
+                        <div className="space-y-1">
+                          <div className="flex items-center gap-1.5 text-sm text-foreground">
+                            <Phone className="h-3.5 w-3.5 text-muted-foreground" />
+                            {telecaller.phone || "—"}
+                          </div>
+                          <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                            <Mail className="h-3 w-3" />
+                            {telecaller.email || "—"}
+                          </div>
                         </div>
                       </TableCell>
-                      <TableCell className="px-4 py-4 align-middle first:pl-6 last:pr-6">
-                        <div className="flex items-center gap-1.5 text-sm text-muted-foreground">
-                          <Mail className="h-3.5 w-3.5" />
-                          {telecaller.email ? (
-                            <Link href={`mailto:${telecaller.email}`} className="hover:underline">
-                              {telecaller.email}
-                            </Link>
-                          ) : (
-                            <span className="text-muted-foreground/70">No email</span>
-                          )}
+                      <TableCell className="px-4 py-4 align-middle" onClick={(event) => event.stopPropagation()}>
+                        <div className="flex items-center gap-3">
+                          <Badge variant="secondary" className={`${status.className} border-0 text-xs font-semibold`}>
+                            {status.label}
+                          </Badge>
+                          <Switch
+                            checked={isActive}
+                            disabled={updateStatus.isPending}
+                            onCheckedChange={(checked) => handleStatusToggle(telecaller, checked)}
+                            aria-label={`Toggle ${telecaller.name} account status`}
+                          />
                         </div>
                       </TableCell>
-                      {/* <TableCell>
-                        <Badge variant="secondary" className={`${status.className} border-0 text-xs font-semibold`}>
-                          {status.label}
-                        </Badge>
-                      </TableCell> */}
-                      {/* <TableCell className="text-right">
-                        <div className="flex justify-end gap-2">
-                          <Button variant="ghost" size="sm" asChild disabled={!telecaller.phone}>
-                            <Link href={telecaller.phone ? `tel:${telecaller.phone}` : "#"}>
-                              <Phone className="mr-2 h-4 w-4" />
-                              Call
-                            </Link>
-                          </Button>
-                          <Button variant="ghost" size="sm" asChild disabled={!telecaller.email}>
-                            <Link href={telecaller.email ? `mailto:${telecaller.email}` : "#"}>
-                              <Mail className="mr-2 h-4 w-4" />
-                              Email
-                            </Link>
-                          </Button>
-                        </div>
-                      </TableCell> */}
+                      <TableCell className="px-4 py-4 text-center align-middle">
+                        <span className="text-sm font-bold text-slate-900 tabular-nums">
+                          {telecaller.patientCount?.toLocaleString("en-IN") ?? "—"}
+                        </span>
+                      </TableCell>
+                      <TableCell className="px-4 py-4 text-center align-middle">
+                        <span className="text-sm font-semibold text-slate-800 tabular-nums">
+                          {telecaller.totalCalls?.toLocaleString("en-IN") ?? "—"}
+                        </span>
+                      </TableCell>
+                      <TableCell className="px-4 py-4 text-center align-middle">
+                        <span className="text-sm font-semibold text-slate-800 tabular-nums">
+                          {telecaller.contactedCount?.toLocaleString("en-IN") ?? "—"}
+                        </span>
+                      </TableCell>
+                      <TableCell className="px-4 py-4 text-center align-middle">
+                        <span className="text-sm font-bold text-emerald-700 tabular-nums">
+                          {telecaller.conversions?.toLocaleString("en-IN") ?? "—"}
+                        </span>
+                      </TableCell>
+                      <TableCell className="px-4 py-4 text-right align-middle last:pr-6" onClick={(event) => event.stopPropagation()}>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className="rounded-full"
+                          asChild
+                        >
+                          <Link href={`/dashboard/sales/telecallers/${telecaller.id}`}>
+                            <Users className="mr-2 h-4 w-4" />
+                            View
+                            <ArrowRight className="ml-2 h-3.5 w-3.5" />
+                          </Link>
+                        </Button>
+                      </TableCell>
                     </TableRow>
                   )
                 })
               ) : (
                 <TableRow>
-                  <TableCell colSpan={4} className="h-40 text-center">
+                  <TableCell colSpan={8} className="h-40 text-center">
                     <div className="flex flex-col items-center gap-3">
                       <div className="rounded-2xl border border-slate-100 bg-slate-50 p-4">
                         <Search className="h-8 w-8 text-muted-foreground/30" />

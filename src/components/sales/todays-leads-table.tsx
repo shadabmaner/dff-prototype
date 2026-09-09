@@ -20,6 +20,8 @@ import { useTelecallers } from "@/hooks/use-telecallers"
 import { useWorkflowPrograms } from "@/hooks/use-workflow-programs"
 import { useLanguages } from "@/hooks/use-languages"
 import { useSpecialitiesQuery } from "@/hooks/use-specialities"
+import { SALES_LEAD_SOURCES, SALES_SPECIALTIES } from "@/lib/sales/lead-assignment-constants"
+import { formatLeadSource } from "@/lib/sales/enrich-lead-display"
 
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
@@ -130,6 +132,7 @@ export function TodaysLeadsTable({
   const [debouncedSearchTerm, setDebouncedSearchTerm] = React.useState("")
   const trimmedSearchTerm = debouncedSearchTerm.trim()
   const [specialtyFilter, setSpecialtyFilter] = React.useState("all")
+  const [sourceFilter, setSourceFilter] = React.useState("all")
   const [programFilter, setProgramFilter] = React.useState("all")
   const [modeFilter, setModeFilter] = React.useState("all")
   const [languageFilter, setLanguageFilter] = React.useState("all")
@@ -275,12 +278,10 @@ export function TodaysLeadsTable({
   }
 
   const specialtyOptions = React.useMemo(() => {
-    const options = new Set<string>()
-    // Add specialties from API
+    const options = new Set<string>(SALES_SPECIALTIES)
     specialitiesData?.data?.forEach((specialty) => {
       options.add(specialty.name)
     })
-    // Also add any specialty_name from existing leads
     data.forEach((lead) => {
       if (lead.specialty_name) {
         options.add(lead.specialty_name)
@@ -288,6 +289,16 @@ export function TodaysLeadsTable({
     })
     return Array.from(options)
   }, [data, specialitiesData])
+
+  const sourceOptions = React.useMemo(() => {
+    const options = new Set<string>(SALES_LEAD_SOURCES.map((source) => source.label))
+    data.forEach((lead) => {
+      if (lead.source) {
+        options.add(formatLeadSource(lead.source))
+      }
+    })
+    return Array.from(options)
+  }, [data])
 
   const programOptions = React.useMemo(() => {
     const options = new Set<string>()
@@ -374,6 +385,10 @@ export function TodaysLeadsTable({
       const matchesSpecialty = specialtyFilter === "all"
         ? true
         : lead.specialty_name === specialtyFilter
+
+      const matchesSource = sourceFilter === "all"
+        ? true
+        : formatLeadSource(lead.source) === sourceFilter
 
       const matchesProgram = programFilter === "all"
         ? true
@@ -474,13 +489,13 @@ export function TodaysLeadsTable({
         }
       })()
 
-      return matchesSearch && matchesSpecialty && matchesProgram && matchesMode &&
+      return matchesSearch && matchesSpecialty && matchesSource && matchesProgram && matchesMode &&
         matchesLanguage && matchesCampaign && matchesAssignedCaller && matchesCurrentStage &&
         matchesAssessmentStatus && matchesSelectedPlan && matchesRegistrationDate && matchesStatus
     })
-  }, [data, trimmedSearchTerm, specialtyFilter, programFilter, modeFilter, languageFilter,
+  }, [data, trimmedSearchTerm, specialtyFilter, sourceFilter, programFilter, modeFilter, languageFilter,
     campaignFilter, assignedCallerFilter, currentStageFilter, assessmentStatusFilter,
-    selectedPlanFilter, dateFilter, dateRange, statusFilter])
+    selectedPlanFilter, dateFilter, dateRange, statusFilter, programsData])
 
   const selectedLeadsData = filteredData.filter((lead) => selectedLeadIds.has(lead.id))
   const unassignedLeads = filteredData.filter((lead) => !lead.assignedTo || lead.stage === "UNASSIGNED")
@@ -498,6 +513,9 @@ export function TodaysLeadsTable({
     if (trimmedSearchTerm) chips.push({ id: "search", label: "Search", value: trimmedSearchTerm })
     if (specialtyFilter !== "all") {
       chips.push({ id: "specialty", label: "Specialty", value: specialtyFilter })
+    }
+    if (sourceFilter !== "all") {
+      chips.push({ id: "source", label: "Source", value: sourceFilter })
     }
     if (programFilter !== "all") {
       chips.push({ id: "program", label: "Program", value: programFilter })
@@ -541,7 +559,7 @@ export function TodaysLeadsTable({
       chips.push({ id: "status", label: "Status", value: label })
     }
     return chips
-  }, [trimmedSearchTerm, specialtyFilter, programFilter, modeFilter, languageFilter, campaignFilter,
+  }, [trimmedSearchTerm, specialtyFilter, sourceFilter, programFilter, modeFilter, languageFilter, campaignFilter,
     assignedCallerFilter, currentStageFilter, assessmentStatusFilter, selectedPlanFilter, dateFilter, dateRange, statusFilter])
 
   const clearFilter = (id: string) => {
@@ -551,6 +569,9 @@ export function TodaysLeadsTable({
         break
       case "specialty":
         setSpecialtyFilter("all")
+        break
+      case "source":
+        setSourceFilter("all")
         break
       case "program":
         setProgramFilter("all")
@@ -698,7 +719,7 @@ export function TodaysLeadsTable({
       header: "Source",
       cell: ({ row }) => (
         <Badge variant="outline" className="text-xs">
-          {row.original.source || row.original.campaign || "Direct"}
+          {formatLeadSource(row.original.source || row.original.campaign)}
         </Badge>
       ),
     },
@@ -903,6 +924,19 @@ export function TodaysLeadsTable({
                 {specialtyOptions.map((specialty) => (
                   <SelectItem key={specialty} value={specialty}>
                     {specialty}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <Select value={sourceFilter} onValueChange={setSourceFilter}>
+              <SelectTrigger className="h-12 min-w-[140px] rounded-2xl border-slate-200/80 text-sm">
+                <SelectValue placeholder="Source" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Sources</SelectItem>
+                {sourceOptions.map((source) => (
+                  <SelectItem key={source} value={source}>
+                    {source}
                   </SelectItem>
                 ))}
               </SelectContent>

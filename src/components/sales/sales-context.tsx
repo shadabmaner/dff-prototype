@@ -13,6 +13,7 @@ import type {
   PaymentStage,
   WebinarStatus,
 } from "@/components/sales/types"
+import { enrichLeadForDisplay } from "@/lib/sales/enrich-lead-display"
 
 type SalesContextValue = {
   leads: Lead[]
@@ -102,7 +103,7 @@ const seedLeads: Lead[] = [
     callbacks: [],
     history: [makeEvent("Lead created", "system"), makeEvent("Marked hot", "sales-1")],
     programValue: 22000,
-    amountRecovered: 0,
+    amountRecovered: 8000,
   },
   {
     id: "LD-1003",
@@ -129,7 +130,7 @@ const seedLeads: Lead[] = [
     callbacks: [],
     history: [makeEvent("Lead created", "system"), makeEvent("Converted", "sales-2")],
     programValue: 18000,
-    amountRecovered: 18000,
+    amountRecovered: 12000,
   },
 
   // New unassigned leads for today's leads
@@ -575,6 +576,8 @@ const seedLeads: Lead[] = [
   },
 ]
 
+const seedLeadsWithDisplay = seedLeads.map(enrichLeadForDisplay)
+
 const seedCallLogs: CallLog[] = [
   {
     id: "CL-9001",
@@ -595,7 +598,7 @@ const seedCallLogs: CallLog[] = [
 ]
 
 export function SalesProvider({ children }: { children: React.ReactNode }) {
-  const [leads, setLeads] = React.useState<Lead[]>(seedLeads)
+  const [leads, setLeads] = React.useState<Lead[]>(seedLeadsWithDisplay)
   const [callLogs, setCallLogs] = React.useState<CallLog[]>(seedCallLogs)
 
   const addLead = React.useCallback((lead: Lead) => {
