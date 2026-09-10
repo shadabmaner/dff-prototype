@@ -251,17 +251,31 @@ function generateMockLead(id: string): Lead {
   ]
 
   const SPECIALTIES = ["Diabetes Free Forever", "Weight Management", "Thyroid Free Forever", "PCOS Care", "Hypertension Control"]
-  const SOURCES = ["Website", "Facebook", "Instagram", "Google Ads", "Mobile App", "Referral"]
+  const SOURCES = ["Meta", "Google Ads", "YouTube Ads", "Website Direct", "Referral"]
+  const CAMPAIGNS = [
+    "DFM Marathi Webinar",
+    "DFF Hindi Reversal Bootcamp",
+    "PCOS Care Sunday Masterclass",
+    "Diabetes Freedom Live Workshop",
+    "Weight Loss Acceleration Webinar"
+  ]
   const CITIES = ["Mumbai", "Delhi", "Bengaluru", "Pune", "Hyderabad", "Ahmedabad", "Chennai"]
   const STAGES: Lead["stage"][] = ["NEW", "MY_LEAD", "HOT", "FOLLOW_UP", "INTERESTED", "ASSESSMENT_PAID", "CONVERTED"]
 
   const patientName = NAMES[absHash % NAMES.length]
   const specialty = SPECIALTIES[absHash % SPECIALTIES.length]
   const source = SOURCES[absHash % SOURCES.length]
+  const campaign = CAMPAIGNS[absHash % CAMPAIGNS.length]
   const city = CITIES[absHash % CITIES.length]
   const stage = STAGES[absHash % STAGES.length]
   const phone = `+91 98${String(10000000 + absHash).slice(0, 8)}`
   const email = `${patientName.toLowerCase().replace(/\s+/g, ".")}@example.com`
+
+  const initialLabels = [
+    "YouTube Video Watched",
+    absHash % 2 === 0 ? "Instagram Post Engaged" : "Webinar Attended (Full)",
+    absHash % 3 === 0 ? "High Intent Lead" : undefined
+  ].filter(Boolean) as string[]
 
   const createdDate = new Date()
   createdDate.setDate(createdDate.getDate() - (5 + (absHash % 25)))
@@ -277,8 +291,9 @@ function generateMockLead(id: string): Lead {
     email,
     city,
     source,
-    campaign: `${specialty} Summer Campaign`,
+    campaign,
     campaignId: `CAMP-${100 + (absHash % 50)}`,
+    labels: initialLabels,
     stage,
     status: stage.toLowerCase(),
     priority: (absHash % 3 === 0 ? "high" : absHash % 2 === 0 ? "medium" : "low"),

@@ -226,11 +226,39 @@ export function buildTelecallerPatients(
   })
 }
 
+export type TelecallerRole = "lead_nurture" | "welcome_call" | "payment_recovery" | "residential_camp"
+
+export function getRoleSpecializationLabel(role?: string): string {
+  switch (role) {
+    case "lead_nurture":
+      return "Lead Nurture Specialist"
+    case "welcome_call":
+      return "Welcome Call Specialist"
+    case "payment_recovery":
+      return "Payment Recovery Specialist"
+    case "residential_camp":
+      return "Residential Camp Booster"
+    default:
+      return "Lead Nurture Specialist"
+  }
+}
+
 export function enrichTelecaller(telecaller: Telecaller): Telecaller {
   const performance = buildTelecallerPerformance(telecaller)
+  const hash = hashString(telecaller.id || "tc")
+  const rolePool: TelecallerRole[] = [
+    "lead_nurture",
+    "welcome_call",
+    "lead_nurture",
+    "payment_recovery",
+    "residential_camp",
+    "lead_nurture",
+  ]
+  const assignedRole = telecaller.roleSpecialization || rolePool[Math.abs(hash) % rolePool.length]
 
   return {
     ...telecaller,
+    roleSpecialization: assignedRole,
     patientCount: telecaller.patientCount ?? performance.patientCount,
     totalCalls: telecaller.totalCalls ?? performance.totalCalls,
     outboundCalls: telecaller.outboundCalls ?? performance.outboundCalls,

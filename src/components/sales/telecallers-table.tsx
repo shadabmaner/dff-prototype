@@ -42,15 +42,45 @@ function getInitials(name?: string) {
   return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase()
 }
 
+const roleConfig: Record<string, { label: string; className: string }> = {
+  lead_nurture: { label: "Lead Nurture", className: "bg-blue-50 text-blue-700 border-blue-200" },
+  welcome_call: { label: "Welcome Call", className: "bg-emerald-50 text-emerald-700 border-emerald-200" },
+  payment_recovery: { label: "Payment Recovery", className: "bg-amber-50 text-amber-700 border-amber-200" },
+  residential_camp: { label: "Residential Camp Booster", className: "bg-purple-50 text-purple-700 border-purple-200" },
+}
+
 export function TelecallersTable({ data, onRefresh, isRefreshing }: TelecallersTableProps) {
   const router = useRouter()
   const [searchTerm, setSearchTerm] = React.useState("")
   const [statusFilter, setStatusFilter] = React.useState<"all" | "active" | "inactive">("all")
+  const [roleFilter, setRoleFilter] = React.useState<"all" | "lead_nurture" | "welcome_call" | "payment_recovery" | "residential_camp">("all")
   const updateStatus = useUpdateTelecallerStatus()
+
+  const roleCounts = React.useMemo(() => {
+    const counts = {
+      all: data.length,
+      lead_nurture: 0,
+      welcome_call: 0,
+      payment_recovery: 0,
+      residential_camp: 0,
+    }
+    data.forEach((tc) => {
+      const role = tc.roleSpecialization || "lead_nurture"
+      if (role in counts) {
+        counts[role as keyof typeof counts] += 1
+      }
+    })
+    return counts
+  }, [data])
 
   const filteredData = React.useMemo(() => {
     return data
       .filter((telecaller) => {
+        const matchesRole =
+          roleFilter === "all"
+            ? true
+            : (telecaller.roleSpecialization || "lead_nurture") === roleFilter
+
         const matchesStatus =
           statusFilter === "all"
             ? true
@@ -65,10 +95,10 @@ export function TelecallersTable({ data, onRefresh, isRefreshing }: TelecallersT
               .some((value) => value!.toLowerCase().includes(term))
           : true
 
-        return matchesStatus && matchesSearch
+        return matchesRole && matchesStatus && matchesSearch
       })
       .sort((a, b) => (a.name || "").localeCompare(b.name || ""))
-  }, [data, searchTerm, statusFilter])
+  }, [data, searchTerm, statusFilter, roleFilter])
 
   const handleStatusToggle = (telecaller: Telecaller, checked: boolean) => {
     updateStatus.mutate({
@@ -77,8 +107,43 @@ export function TelecallersTable({ data, onRefresh, isRefreshing }: TelecallersT
     })
   }
 
+  const roleTabs = [
+    { id: "all", label: "All Telecallers", count: roleCounts.all },
+    { id: "lead_nurture", label: "Lead Nurture", count: roleCounts.lead_nurture },
+    { id: "welcome_call", label: "Welcome Call", count: roleCounts.welcome_call },
+    { id: "payment_recovery", label: "Payment Recovery", count: roleCounts.payment_recovery },
+    { id: "residential_camp", label: "Residential Camp Boosting", count: roleCounts.residential_camp },
+  ] as const
+
   return (
     <div className="space-y-4">
+      {/* Role Bifurcation Filter Pill Bar at Top */}
+      <div className="flex flex-wrap items-center gap-2 p-1.5 bg-slate-100/90 rounded-2xl border border-slate-200/80">
+        {roleTabs.map((tab) => {
+          const isActive = roleFilter === tab.id
+          return (
+            <button
+              key={tab.id}
+              onClick={() => setRoleFilter(tab.id as any)}
+              className={`px-4 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-2 ${
+                isActive
+                  ? "bg-[#1F56A3] text-white shadow-md shadow-[#1F56A3]/20"
+                  : "text-slate-600 hover:text-slate-900 hover:bg-white/70"
+              }`}
+            >
+              <span>{tab.label}</span>
+              <span
+                className={`px-1.5 py-0.5 rounded-md text-[10px] font-bold ${
+                  isActive ? "bg-white/20 text-white" : "bg-slate-200 text-slate-700"
+                }`}
+              >
+                {tab.count}
+              </span>
+            </button>
+          )
+        })}
+      </div>
+
       <Card className="rounded-2xl border border-slate-200 bg-white/80 p-4 shadow-sm">
         <div className="flex flex-col gap-3 md:flex-row md:items-center">
           <div className="relative flex-1">
@@ -119,7 +184,7 @@ export function TelecallersTable({ data, onRefresh, isRefreshing }: TelecallersT
           <Table>
             <TableHeader>
               <TableRow className="border-b border-slate-100/80 bg-slate-50/60 hover:bg-slate-50/60">
-                <TableHead className="px-4 py-4 text-[11px] font-bold uppercase tracking-wider text-slate-500 first:pl-6">Telecaller</TableHead>
+                <TableHead className="px-4 py-4 text-[11px] font-bold uppercase tracking-wider text-slate-500 first:pl-6">Telecaller & Role</TableHead>
                 <TableHead className="px-4 py-4 text-[11px] font-bold uppercase tracking-wider text-slate-500">Contact</TableHead>
                 <TableHead className="px-4 py-4 text-[11px] font-bold uppercase tracking-wider text-slate-500 text-center">Account Status</TableHead>
                 <TableHead className="px-4 py-4 text-[11px] font-bold uppercase tracking-wider text-slate-500 text-center">Patients</TableHead>
@@ -135,6 +200,7 @@ export function TelecallersTable({ data, onRefresh, isRefreshing }: TelecallersT
                   const statusKey = telecaller.is_active === false ? "inactive" : "active"
                   const status = statusConfig[statusKey]
                   const isActive = telecaller.is_active !== false
+                  const role = roleConfig[telecaller.roleSpecialization || "lead_nurture"] || roleConfig.lead_nurture
 
                   return (
                     <TableRow
@@ -148,14 +214,19 @@ export function TelecallersTable({ data, onRefresh, isRefreshing }: TelecallersT
                             {getInitials(telecaller.name)}
                           </div>
                           <div>
-                            <Link
-                              href={`/dashboard/sales/telecallers/${telecaller.id}`}
-                              className="text-sm font-semibold text-slate-900 hover:text-primary hover:underline"
-                              onClick={(event) => event.stopPropagation()}
-                            >
-                              {telecaller.name || "Unnamed Telecaller"}
-                            </Link>
-                            <p className="text-xs text-slate-500">
+                            <div className="flex items-center gap-2">
+                              <Link
+                                href={`/dashboard/sales/telecallers/${telecaller.id}`}
+                                className="text-sm font-semibold text-slate-900 hover:text-primary hover:underline"
+                                onClick={(event) => event.stopPropagation()}
+                              >
+                                {telecaller.name || "Unnamed Telecaller"}
+                              </Link>
+                              <Badge variant="outline" className={`${role.className} border text-[10px] font-bold px-1.5 py-0`}>
+                                {role.label}
+                              </Badge>
+                            </div>
+                            <p className="text-xs text-slate-500 mt-0.5">
                               {telecaller.conversionRate?.toFixed(1)}% conversion rate
                             </p>
                           </div>

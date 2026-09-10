@@ -113,6 +113,7 @@ export interface Lead {
   specialtyProgramMode?: string
   mode?: string
   specialty?: string
+  labels?: string[]
 }
 
 export interface CallLog {

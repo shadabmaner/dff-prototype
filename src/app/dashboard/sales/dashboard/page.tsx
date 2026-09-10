@@ -34,6 +34,11 @@ import {
   Calendar,
   ChevronRight,
   AlertCircle,
+  Layers,
+  PhoneCall,
+  IndianRupee,
+  Sparkles,
+  ArrowRight,
 } from "lucide-react"
 import { useRouter, usePathname } from "next/navigation"
 
@@ -166,13 +171,25 @@ export default function SalesDashboardPage() {
   const pipelineTotal = pipelineChartData.reduce((sum, entry) => sum + (entry.value ?? 0), 0)
 
   const leadSourcePalette = ["#2563eb", "#0ea5e9", "#6366f1", "#22c55e", "#f97316", "#ec4899"]
-  const leadSourceChartData = leadSources.map((source, idx) => ({
-    name:
-      pipelineLabelMap[source.source] ??
-      source.source
+  
+  // Aggregate lead sources by normalized name to combine duplicate channels (e.g. multiple "Referral" entries)
+  const leadSourceMap = new Map<string, number>()
+  leadSources.forEach((source) => {
+    if (!source || !source.source) return
+    const raw = source.source.trim()
+    const name =
+      pipelineLabelMap[raw.toLowerCase()] ??
+      pipelineLabelMap[raw] ??
+      raw
+        .toLowerCase()
         .replace(/_/g, " ")
-        .replace(/\b\w/g, (letter) => letter.toUpperCase()),
-    value: source.count,
+        .replace(/\b\w/g, (letter) => letter.toUpperCase())
+    leadSourceMap.set(name, (leadSourceMap.get(name) || 0) + (Number(source.count) || 0))
+  })
+
+  const leadSourceChartData = Array.from(leadSourceMap.entries()).map(([name, value], idx) => ({
+    name,
+    value,
     fill: leadSourcePalette[idx % leadSourcePalette.length],
   }))
   const totalLeadSourceCount = leadSourceChartData.reduce((sum, entry) => sum + (entry.value ?? 0), 0)
@@ -322,6 +339,123 @@ export default function SalesDashboardPage() {
             </div>
           )
         })}
+      </div>
+
+      {/* Action-Based Sales Manager Workstream Queues */}
+      <div className="space-y-3">
+        <div className="flex items-center justify-between">
+          <div>
+            <h2 className="text-lg font-bold text-slate-900">Operational Workstream Queues</h2>
+            <p className="text-xs text-slate-500">
+              Role-specialized telecaller queues for fresh leads, newly paid patients, installment recoveries, and booster upgrades
+            </p>
+          </div>
+          <Badge variant="outline" className="bg-blue-50 text-[#1F56A3] border-blue-200 text-xs font-semibold">
+            Auto-Assignment Enabled
+          </Badge>
+        </div>
+
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+          {/* Workstream 1 */}
+          <Card
+            onClick={() => router.push("/dashboard/sales/leads")}
+            className="border border-blue-200/80 bg-gradient-to-br from-white to-blue-50/40 hover:shadow-md transition-all cursor-pointer rounded-2xl p-5 group"
+          >
+            <div className="flex items-start justify-between mb-3">
+              <div className="p-2.5 rounded-xl bg-blue-100/70 text-[#1F56A3] group-hover:scale-105 transition-transform">
+                <Layers className="h-5 w-5" />
+              </div>
+              <Badge className="bg-blue-100 text-[#1F56A3] border-blue-200 text-[10px] font-bold">
+                500 Pending
+              </Badge>
+            </div>
+            <h3 className="font-bold text-sm text-slate-900 group-hover:text-[#1F56A3] transition-colors">
+              New Lead Management
+            </h3>
+            <p className="text-xs text-slate-500 mt-1 line-clamp-2">
+              Fresh inbound leads from Meta, Google & Webinars for Lead Nurture telecallers.
+            </p>
+            <div className="mt-4 pt-3 border-t border-slate-100 flex items-center justify-between text-xs font-bold text-[#1F56A3]">
+              <span>Auto-Assign FIFO</span>
+              <ArrowRight className="h-3.5 w-3.5 group-hover:translate-x-1 transition-transform" />
+            </div>
+          </Card>
+
+          {/* Workstream 2 */}
+          <Card
+            onClick={() => router.push("/dashboard/sales/welcome-calls")}
+            className="border border-emerald-200/80 bg-gradient-to-br from-white to-emerald-50/40 hover:shadow-md transition-all cursor-pointer rounded-2xl p-5 group"
+          >
+            <div className="flex items-start justify-between mb-3">
+              <div className="p-2.5 rounded-xl bg-emerald-100/70 text-emerald-700 group-hover:scale-105 transition-transform">
+                <PhoneCall className="h-5 w-5" />
+              </div>
+              <Badge className="bg-emerald-100 text-emerald-800 border-emerald-200 text-[10px] font-bold">
+                145 Pending
+              </Badge>
+            </div>
+            <h3 className="font-bold text-sm text-slate-900 group-hover:text-emerald-700 transition-colors">
+              Welcome Call Management
+            </h3>
+            <p className="text-xs text-slate-500 mt-1 line-clamp-2">
+              Newly paid patients awaiting care team assignment and onboarding calls.
+            </p>
+            <div className="mt-4 pt-3 border-t border-slate-100 flex items-center justify-between text-xs font-bold text-emerald-700">
+              <span>Open Welcome Queue</span>
+              <ArrowRight className="h-3.5 w-3.5 group-hover:translate-x-1 transition-transform" />
+            </div>
+          </Card>
+
+          {/* Workstream 3 */}
+          <Card
+            onClick={() => router.push("/dashboard/sales/payment-recovery")}
+            className="border border-amber-200/80 bg-gradient-to-br from-white to-amber-50/40 hover:shadow-md transition-all cursor-pointer rounded-2xl p-5 group"
+          >
+            <div className="flex items-start justify-between mb-3">
+              <div className="p-2.5 rounded-xl bg-amber-100/70 text-amber-700 group-hover:scale-105 transition-transform">
+                <IndianRupee className="h-5 w-5" />
+              </div>
+              <Badge className="bg-amber-100 text-amber-800 border-amber-200 text-[10px] font-bold">
+                210 Overdue
+              </Badge>
+            </div>
+            <h3 className="font-bold text-sm text-slate-900 group-hover:text-amber-700 transition-colors">
+              Payment Recovery
+            </h3>
+            <p className="text-xs text-slate-500 mt-1 line-clamp-2">
+              Installments due or overdue (₹14.8L pending) for Payment Recovery telecallers.
+            </p>
+            <div className="mt-4 pt-3 border-t border-slate-100 flex items-center justify-between text-xs font-bold text-amber-700">
+              <span>Follow Up Installments</span>
+              <ArrowRight className="h-3.5 w-3.5 group-hover:translate-x-1 transition-transform" />
+            </div>
+          </Card>
+
+          {/* Workstream 4 */}
+          <Card
+            onClick={() => router.push("/dashboard/sales/residential-camp")}
+            className="border border-purple-200/80 bg-gradient-to-br from-white to-purple-50/40 hover:shadow-md transition-all cursor-pointer rounded-2xl p-5 group"
+          >
+            <div className="flex items-start justify-between mb-3">
+              <div className="p-2.5 rounded-xl bg-purple-100/70 text-purple-700 group-hover:scale-105 transition-transform">
+                <Sparkles className="h-5 w-5" />
+              </div>
+              <Badge className="bg-purple-100 text-purple-800 border-purple-200 text-[10px] font-bold">
+                180 Eligible
+              </Badge>
+            </div>
+            <h3 className="font-bold text-sm text-slate-900 group-hover:text-purple-700 transition-colors">
+              Residential Camp Boosting
+            </h3>
+            <p className="text-xs text-slate-500 mt-1 line-clamp-2">
+              Existing &gt;3 month patients eligible for residential intensive boost upgrades.
+            </p>
+            <div className="mt-4 pt-3 border-t border-slate-100 flex items-center justify-between text-xs font-bold text-purple-700">
+              <span>Boost Camp Candidates</span>
+              <ArrowRight className="h-3.5 w-3.5 group-hover:translate-x-1 transition-transform" />
+            </div>
+          </Card>
+        </div>
       </div>
 
       <SalesRecoveryOverview leads={leads} />
@@ -544,8 +678,8 @@ export default function SalesDashboardPage() {
                         }}
                       />
                       <Bar dataKey="percentage" radius={[8, 8, 0, 0]} barSize={32}>
-                        {leadSourceBarData.map((entry) => (
-                          <Cell key={entry.name} fill={entry.fill} />
+                        {leadSourceBarData.map((entry, idx) => (
+                          <Cell key={`${entry.name}-${idx}`} fill={entry.fill} />
                         ))}
                         <LabelList
                           dataKey="percentage"
@@ -560,8 +694,8 @@ export default function SalesDashboardPage() {
                   </ResponsiveContainer>
                 </div>
                 <div className="mt-6 grid gap-3 md:grid-cols-2">
-                  {leadSourceBarData.map((entry) => (
-                    <div key={entry.name} className="flex items-center justify-between rounded-xl bg-slate-50/70 px-3 py-2">
+                  {leadSourceBarData.map((entry, idx) => (
+                    <div key={`${entry.name}-${idx}`} className="flex items-center justify-between rounded-xl bg-slate-50/70 px-3 py-2">
                       <div className="flex items-center gap-3">
                         <div className="h-2.5 w-2.5 rounded-full" style={{ backgroundColor: entry.fill }} />
                         <div>

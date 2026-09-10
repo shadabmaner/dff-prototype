@@ -29,6 +29,7 @@ export interface Telecaller {
   weeklyTrends?: TelecallerWeeklyTrend[]
   outcomesBreakdown?: TelecallerOutcomeBreakdown[]
   recentCallLogs?: TelecallerCallLog[]
+  roleSpecialization?: "lead_nurture" | "welcome_call" | "payment_recovery" | "residential_camp"
 }
 
 export function useTelecallers(options?: { enabled?: boolean }) {
@@ -66,6 +67,7 @@ export function useTelecallers(options?: { enabled?: boolean }) {
             conversionRate: item.conversion_rate ?? item.conversionRate,
             avgCallsPerDay: item.avg_calls_per_day ?? item.avgCallsPerDay,
             joinedAt: item.created_at ?? item.joinedAt,
+            roleSpecialization: item.role_specialization ?? item.roleSpecialization,
           })
         )
         return acc

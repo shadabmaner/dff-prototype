@@ -31,6 +31,10 @@ import {
   Stethoscope,
   Apple,
   HeartPulse,
+  Tag,
+  Plus,
+  X,
+  Sparkles,
   type LucideIcon,
   ChartColumnIncreasing,
 } from "lucide-react";
@@ -43,7 +47,9 @@ import type { Lead } from "@/components/sales/types";
 import { EnhancedCallLogForm } from "@/components/sales/enhanced-call-log-form";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { toast } from "sonner";
 import {
   Sheet,
   SheetContent,
@@ -201,6 +207,47 @@ export function LeadDetailsDietTheme({
   );
   const [callLogRefreshKey, setCallLogRefreshKey] = useState(0);
   const [isCallLogSheetOpen, setIsCallLogSheetOpen] = useState(false);
+
+  // Lead Labels state
+  const [leadLabels, setLeadLabels] = useState<string[]>(() => {
+    return lead.labels && lead.labels.length > 0
+      ? lead.labels
+      : ["YouTube Video Watched", "Instagram Post Engaged"];
+  });
+  const [customLabelInput, setCustomLabelInput] = useState("");
+  const [isLabelPopoverOpen, setIsLabelPopoverOpen] = useState(false);
+
+  const PRESET_LABELS = [
+    "YouTube Video Watched",
+    "Instagram Post Engaged",
+    "Webinar Attended (Full)",
+    "Webinar Drop-off (Partial)",
+    "High Intent Lead",
+    "Doctor Recommended",
+    "Price Sensitive / Budget Inquiry",
+    "Language: Marathi Preferred",
+    "Language: Hindi Preferred",
+    "Family Member Inquiring",
+    "Medical Reports Pending Review",
+  ];
+
+  const handleAddLabel = (labelToAdd: string) => {
+    const trimmed = labelToAdd.trim();
+    if (!trimmed) return;
+    if (leadLabels.includes(trimmed)) {
+      toast.info(`"${trimmed}" is already added.`);
+      return;
+    }
+    setLeadLabels((prev) => [...prev, trimmed]);
+    toast.success(`Label "${trimmed}" added to lead!`);
+    setCustomLabelInput("");
+    setIsLabelPopoverOpen(false);
+  };
+
+  const handleRemoveLabel = (labelToRemove: string) => {
+    setLeadLabels((prev) => prev.filter((l) => l !== labelToRemove));
+    toast.success(`Label "${labelToRemove}" removed.`);
+  };
 
   const stage = stageConfig[lead.stage] ?? stageConfig[lead.status?.toUpperCase()] ?? stageConfig.NEW;
   const leadName = lead.patientName || lead.name || "Lead";
@@ -509,6 +556,106 @@ export function LeadDetailsDietTheme({
                   {stage.label}
                 </Badge>
               </div>
+
+              {/* Interactive Lead Labels in Header */}
+              <div className="flex flex-wrap items-center gap-1.5 pt-1">
+                {leadLabels.map((lbl) => (
+                  <Badge
+                    key={lbl}
+                    variant="secondary"
+                    className="text-xs bg-indigo-50 text-indigo-700 border border-indigo-200/80 font-medium py-0.5 px-2 flex items-center gap-1 group shadow-xs"
+                  >
+                    <Tag className="w-2.5 h-2.5 text-indigo-500" />
+                    {lbl}
+                    <button
+                      onClick={() => handleRemoveLabel(lbl)}
+                      className="hover:text-rose-600 transition-colors ml-0.5"
+                      title={`Remove ${lbl}`}
+                    >
+                      <X className="w-3 h-3" />
+                    </button>
+                  </Badge>
+                ))}
+
+                <Popover open={isLabelPopoverOpen} onOpenChange={setIsLabelPopoverOpen}>
+                  <PopoverTrigger asChild>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="h-6 px-2.5 text-xs rounded-full border-dashed border-indigo-300 text-indigo-700 hover:bg-indigo-50 font-medium"
+                    >
+                      <Plus className="w-3 h-3 mr-1 text-indigo-600" />
+                      Add Label
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-80 p-3 rounded-2xl shadow-xl border border-slate-200 z-50 bg-white" align="start">
+                    <div className="space-y-3">
+                      <div className="flex items-center justify-between border-b border-slate-100 pb-2">
+                        <p className="text-xs font-bold text-slate-800 flex items-center gap-1.5">
+                          <Tag className="w-3.5 h-3.5 text-[#1F56A3]" />
+                          Add Lead Label
+                        </p>
+                        <span className="text-[10px] text-slate-400">Behavioral tags</span>
+                      </div>
+
+                      {/* Quick Presets */}
+                      <div className="space-y-1 max-h-48 overflow-y-auto pr-1">
+                        <p className="text-[10px] uppercase font-semibold text-slate-400 tracking-wider">Quick Presets</p>
+                        {PRESET_LABELS.map((preset) => {
+                          const isSelected = leadLabels.includes(preset);
+                          return (
+                            <button
+                              key={preset}
+                              type="button"
+                              onClick={() => !isSelected && handleAddLabel(preset)}
+                              disabled={isSelected}
+                              className={`w-full text-left px-2.5 py-1.5 rounded-lg text-xs flex items-center justify-between transition-colors ${
+                                isSelected
+                                  ? "bg-slate-50 text-slate-400 cursor-not-allowed"
+                                  : "hover:bg-indigo-50/80 text-slate-700 hover:text-indigo-900"
+                              }`}
+                            >
+                              <span>{preset}</span>
+                              {isSelected ? (
+                                <span className="text-[10px] text-slate-400">Added</span>
+                              ) : (
+                                <Plus className="w-3 h-3 text-indigo-600" />
+                              )}
+                            </button>
+                          );
+                        })}
+                      </div>
+
+                      {/* Custom Label Write-In */}
+                      <div className="pt-2 border-t border-slate-100 space-y-2">
+                        <p className="text-[10px] uppercase font-semibold text-slate-400 tracking-wider">Custom Label</p>
+                        <div className="flex gap-1.5">
+                          <Input
+                            placeholder="e.g. Marathi Webinar Watched"
+                            value={customLabelInput}
+                            onChange={(e) => setCustomLabelInput(e.target.value)}
+                            onKeyDown={(e) => {
+                              if (e.key === "Enter") {
+                                e.preventDefault();
+                                handleAddLabel(customLabelInput);
+                              }
+                            }}
+                            className="h-8 text-xs rounded-lg"
+                          />
+                          <Button
+                            size="sm"
+                            type="button"
+                            className="h-8 px-2.5 text-xs bg-[#1F56A3] hover:bg-[#192B42] text-white"
+                            onClick={() => handleAddLabel(customLabelInput)}
+                          >
+                            Add
+                          </Button>
+                        </div>
+                      </div>
+                    </div>
+                  </PopoverContent>
+                </Popover>
+              </div>
             </div>
           </div>
           <div className="flex flex-wrap gap-2 lg:justify-end">
@@ -712,42 +859,46 @@ export function LeadDetailsDietTheme({
                       Lead Details
                     </p>
                   </div>
-                  <div className="grid grid-cols-2 gap-5">
-                    {lead.source && (
-                      <div className="p-3 rounded-lg bg-slate-50/50">
-                        <p className="text-xs font-semibold text-slate-500 mb-1.5 uppercase tracking-wider">
-                          Source
-                        </p>
-                        <Badge className="bg-white border border-slate-200 capitalize text-slate-700 shadow-sm">
-                          {lead.source}
-                        </Badge>
-                      </div>
-                    )}
-                    {lead.campaign && (
-                      <div className="p-3 rounded-lg bg-slate-50/50 hover:bg-slate-100/50 transition-colors">
-                        <p className="text-xs font-semibold text-slate-500 mb-1.5 uppercase tracking-wider">
-                          Campaign
-                        </p>
-                        <p className="text-sm font-bold text-slate-900">
-                          {lead.campaign}
-                        </p>
-                      </div>
-                    )}
-                    <div className="p-3 rounded-lg bg-slate-50/50 hover:bg-slate-100/50 transition-colors">
-                      <p className="text-xs font-semibold text-slate-500 mb-1.5 uppercase tracking-wider">
-                        Assigned Agent
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <div className="p-3 rounded-xl bg-slate-50/70 border border-slate-100">
+                      <p className="text-xs font-semibold text-slate-500 mb-1 uppercase tracking-wider">
+                        Specialty
                       </p>
-                      <p className="text-sm font-bold text-slate-900">
+                      <Badge variant="outline" className="bg-blue-50/70 text-blue-800 border-blue-200 font-bold text-xs py-1">
+                        {lead.specialty || lead.specialty_name || "Diabetes Free Forever"}
+                      </Badge>
+                    </div>
+                    <div className="p-3 rounded-xl bg-slate-50/70 border border-slate-100">
+                      <p className="text-xs font-semibold text-slate-500 mb-1 uppercase tracking-wider">
+                        Lead Source
+                      </p>
+                      <Badge className="bg-emerald-50 text-emerald-800 border border-emerald-200 font-semibold text-xs py-1 shadow-xs">
+                        {lead.source || "Meta"}
+                      </Badge>
+                    </div>
+                    <div className="p-3 rounded-xl bg-slate-50/70 border border-slate-100">
+                      <p className="text-xs font-semibold text-slate-500 mb-1 uppercase tracking-wider">
+                        Campaign
+                      </p>
+                      <p className="text-xs font-bold text-slate-900 truncate" title={lead.campaign || "DFM Marathi Webinar"}>
+                        {lead.campaign || "DFM Marathi Webinar"}
+                      </p>
+                    </div>
+                    <div className="p-3 rounded-xl bg-slate-50/70 border border-slate-100">
+                      <p className="text-xs font-semibold text-slate-500 mb-1 uppercase tracking-wider">
+                        Assigned Telecaller
+                      </p>
+                      <p className="text-xs font-bold text-slate-900">
                         {assignedAgent}
                       </p>
                     </div>
-                    <div className="p-3 rounded-lg bg-slate-50/50">
-                      <p className="text-xs font-semibold text-slate-500 mb-1.5 uppercase tracking-wider">
-                        Status
+                    <div className="p-3 rounded-xl bg-slate-50/70 border border-slate-100">
+                      <p className="text-xs font-semibold text-slate-500 mb-1 uppercase tracking-wider">
+                        Pipeline Status
                       </p>
                       <Badge
                         className={cn(
-                          "font-semibold border shadow-sm",
+                          "font-semibold border shadow-xs text-xs py-0.5",
                           stage.badgeBg,
                           stage.badgeBorder,
                           stage.badgeText,
@@ -755,6 +906,123 @@ export function LeadDetailsDietTheme({
                       >
                         {stage.label}
                       </Badge>
+                    </div>
+                    <div className="p-3 rounded-xl bg-slate-50/70 border border-slate-100">
+                      <p className="text-xs font-semibold text-slate-500 mb-1 uppercase tracking-wider">
+                        Registration City
+                      </p>
+                      <p className="text-xs font-bold text-slate-900">
+                        {lead.city || "Mumbai"}
+                      </p>
+                    </div>
+                  </div>
+
+                  {/* Applied Labels in Lead Details */}
+                  <div className="mt-4 p-4 rounded-xl bg-indigo-50/30 border border-indigo-100/80">
+                    <div className="flex items-center justify-between mb-2.5">
+                      <div className="flex items-center gap-2">
+                        <Tag className="w-4 h-4 text-[#1F56A3]" />
+                        <span className="text-xs font-bold text-slate-800 uppercase tracking-wider">
+                          Applied Lead Labels ({leadLabels.length})
+                        </span>
+                      </div>
+                      <span className="text-[11px] text-slate-500">Labels can be managed by sales managers and telecallers</span>
+                    </div>
+                    <div className="flex flex-wrap items-center gap-2">
+                      {leadLabels.map((lbl) => (
+                        <Badge
+                          key={lbl}
+                          variant="secondary"
+                          className="text-xs bg-white text-indigo-800 border border-indigo-200/90 font-semibold py-1 px-2.5 flex items-center gap-1.5 shadow-xs"
+                        >
+                          <span className="w-1.5 h-1.5 rounded-full bg-indigo-500" />
+                          {lbl}
+                          <button
+                            onClick={() => handleRemoveLabel(lbl)}
+                            className="text-slate-400 hover:text-rose-600 transition-colors ml-1"
+                            title={`Remove ${lbl}`}
+                          >
+                            <X className="w-3.5 h-3.5" />
+                          </button>
+                        </Badge>
+                      ))}
+
+                      <Popover>
+                        <PopoverTrigger asChild>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            className="h-7 px-3 text-xs rounded-full border-dashed border-indigo-400 text-indigo-700 hover:bg-white bg-white/70 font-semibold"
+                          >
+                            <Plus className="w-3.5 h-3.5 mr-1 text-indigo-600" />
+                            Add Label
+                          </Button>
+                        </PopoverTrigger>
+                        <PopoverContent className="w-80 p-3 rounded-2xl shadow-xl border border-slate-200 z-50 bg-white" align="start">
+                          <div className="space-y-3">
+                            <div className="flex items-center justify-between border-b border-slate-100 pb-2">
+                              <p className="text-xs font-bold text-slate-800 flex items-center gap-1.5">
+                                <Tag className="w-3.5 h-3.5 text-[#1F56A3]" />
+                                Select Lead Label
+                              </p>
+                              <span className="text-[10px] text-slate-400">Behavioral tags</span>
+                            </div>
+
+                            <div className="space-y-1 max-h-48 overflow-y-auto pr-1">
+                              <p className="text-[10px] uppercase font-semibold text-slate-400 tracking-wider">Quick Presets</p>
+                              {PRESET_LABELS.map((preset) => {
+                                const isSelected = leadLabels.includes(preset);
+                                return (
+                                  <button
+                                    key={preset}
+                                    type="button"
+                                    onClick={() => !isSelected && handleAddLabel(preset)}
+                                    disabled={isSelected}
+                                    className={`w-full text-left px-2.5 py-1.5 rounded-lg text-xs flex items-center justify-between transition-colors ${
+                                      isSelected
+                                        ? "bg-slate-50 text-slate-400 cursor-not-allowed"
+                                        : "hover:bg-indigo-50 text-slate-700 hover:text-indigo-900 font-medium"
+                                    }`}
+                                  >
+                                    <span>{preset}</span>
+                                    {isSelected ? (
+                                      <span className="text-[10px] text-slate-400">Added</span>
+                                    ) : (
+                                      <Plus className="w-3 h-3 text-indigo-600" />
+                                    )}
+                                  </button>
+                                );
+                              })}
+                            </div>
+
+                            <div className="pt-2 border-t border-slate-100 space-y-2">
+                              <p className="text-[10px] uppercase font-semibold text-slate-400 tracking-wider">Custom Label</p>
+                              <div className="flex gap-1.5">
+                                <Input
+                                  placeholder="e.g. YouTube Video Watched"
+                                  value={customLabelInput}
+                                  onChange={(e) => setCustomLabelInput(e.target.value)}
+                                  onKeyDown={(e) => {
+                                    if (e.key === "Enter") {
+                                      e.preventDefault();
+                                      handleAddLabel(customLabelInput);
+                                    }
+                                  }}
+                                  className="h-8 text-xs rounded-lg"
+                                />
+                                <Button
+                                  size="sm"
+                                  type="button"
+                                  className="h-8 px-2.5 text-xs bg-[#1F56A3] hover:bg-[#192B42] text-white"
+                                  onClick={() => handleAddLabel(customLabelInput)}
+                                >
+                                  Add
+                                </Button>
+                              </div>
+                            </div>
+                          </div>
+                        </PopoverContent>
+                      </Popover>
                     </div>
                   </div>
                 </div>

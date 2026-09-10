@@ -4,14 +4,16 @@ import * as React from "react"
 import { useRouter, useSearchParams } from "next/navigation"
 
 import { useLeads } from "@/hooks/use-leads"
+import { useTelecallers } from "@/hooks/use-telecallers"
 import { EnhancedLeadsTable } from "@/components/sales/enhanced-leads-table"
 import { AddLeadDialog } from "@/components/sales/add-lead-dialog"
+import { AutoAssignQuantityModal } from "@/components/sales/auto-assign-quantity-modal"
 
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
-import { RefreshCw, Sparkles, ShieldCheck, CircleCheck } from "lucide-react"
+import { RefreshCw, Sparkles, ShieldCheck, CircleCheck, Zap, Users, UserCheck, Clock, Layers } from "lucide-react"
 import { LeadsSkeleton } from "@/components/sales/skeletons"
 
 type LeadTab = "all" | "unassigned" | "my" | "hot" | "followup" | "converted" | "dropped"
@@ -128,6 +130,19 @@ export default function LeadsPage() {
     return result
   }, [leads, tab])
 
+  const { data: telecallers = [] } = useTelecallers()
+  const leadNurtureTelecallers = React.useMemo(() => {
+    const list = telecallers.filter((tc) => (tc.roleSpecialization || "lead_nurture") === "lead_nurture")
+    return list.length > 0 ? list : telecallers
+  }, [telecallers])
+
+  const [pendingUnassignedCount, setPendingUnassignedCount] = React.useState(500)
+  const [isAutoAssignModalOpen, setIsAutoAssignModalOpen] = React.useState(false)
+
+  const handleAutoAssign = async (quantity: number, selectedTelecallerIds: string[]) => {
+    setPendingUnassignedCount((prev) => Math.max(0, prev - quantity))
+  }
+
   // Only show full page loader for initial load, not for filter changes
   if (isLoading && !hasLoadedOnce) {
     return <LeadsSkeleton />
@@ -145,22 +160,79 @@ export default function LeadsPage() {
     <div className="space-y-6 p-8 min-h-screen bg-gradient-to-br from-slate-50 via-blue-50/30 to-slate-50 rounded-[50px]">
       {/* Header */}
       <div className="space-y-4">
-        
         <div className="flex flex-col gap-5 md:flex-row md:items-start md:justify-between">
           <div>
-            <h1 className="text-3xl md:text-4xl font-bold text-slate-900 tracking-tight">Lead Management </h1>
+            <div className="flex items-center gap-3">
+              <h1 className="text-3xl md:text-4xl font-bold text-slate-900 tracking-tight">
+                New Lead Management
+              </h1>
+              <Badge variant="outline" className="bg-blue-50 text-[#1F56A3] border-blue-200 font-bold text-xs py-0.5">
+                Lead Nurture Queue
+              </Badge>
+            </div>
+            <p className="text-sm text-slate-500 mt-1">
+              Fresh inbound leads from Meta, Google Ads & Webinars waiting for first-touch telecaller nurturing
+            </p>
           </div>
-          <div className="flex flex-wrap gap-3">
-            {/* <Button variant="outline" onClick={() => refetch()}>
-              <RefreshCw className="mr-2 h-4 w-4" /> Sync now
+          <div className="flex flex-wrap items-center gap-3">
+            <Button
+              onClick={() => setIsAutoAssignModalOpen(true)}
+              className="bg-[#1F56A3] hover:bg-[#192B42] text-white font-bold h-11 px-5 rounded-2xl shadow-lg shadow-[#1F56A3]/20"
+            >
+              <Zap className="mr-2 h-4 w-4 text-[#FFC20E] fill-[#FFC20E]" />
+              Auto Assignment ({pendingUnassignedCount} Pending)
             </Button>
-            <Button className="bg-gradient-to-r from-slate-900 to-slate-800 hover:from-slate-800 hover:to-slate-700 text-white shadow-lg shadow-slate-900/20">
-              Export leads
-            </Button> */}
             <AddLeadDialog open={showAddDialog} onOpenChange={setShowAddDialog} onSuccess={handleLeadAdded} />
           </div>
         </div>
+
+        {/* Lead Nurture Queue Overview Cards */}
+        <div className="grid gap-4 sm:grid-cols-3">
+          <div className="p-4 rounded-2xl bg-white/90 border border-slate-200/80 shadow-sm flex items-center gap-3.5">
+            <div className="p-3 rounded-xl bg-blue-50 text-[#1F56A3]">
+              <Layers className="h-5 w-5" />
+            </div>
+            <div>
+              <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Unassigned FIFO Queue</p>
+              <p className="text-2xl font-bold text-slate-900">{pendingUnassignedCount}</p>
+              <p className="text-[11px] text-blue-600 font-medium">Ready for auto-distribution</p>
+            </div>
+          </div>
+
+          <div className="p-4 rounded-2xl bg-white/90 border border-slate-200/80 shadow-sm flex items-center gap-3.5">
+            <div className="p-3 rounded-xl bg-emerald-50 text-emerald-600">
+              <UserCheck className="h-5 w-5" />
+            </div>
+            <div>
+              <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Active Nurture Callers</p>
+              <p className="text-2xl font-bold text-slate-900">
+                {leadNurtureTelecallers.filter((tc) => tc.is_active !== false).length}
+              </p>
+              <p className="text-[11px] text-emerald-600 font-medium">Receiving lead nurture pool</p>
+            </div>
+          </div>
+
+          <div className="p-4 rounded-2xl bg-white/90 border border-slate-200/80 shadow-sm flex items-center gap-3.5">
+            <div className="p-3 rounded-xl bg-amber-50 text-amber-600">
+              <Clock className="h-5 w-5" />
+            </div>
+            <div>
+              <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Target SLA Window</p>
+              <p className="text-2xl font-bold text-slate-900">&lt; 2 Hours</p>
+              <p className="text-[11px] text-amber-700 font-medium">FIFO response rule applied</p>
+            </div>
+          </div>
+        </div>
       </div>
+
+      <AutoAssignQuantityModal
+        open={isAutoAssignModalOpen}
+        onOpenChange={setIsAutoAssignModalOpen}
+        workstreamName="New Lead Nurture Queue"
+        totalPendingCount={pendingUnassignedCount}
+        telecallers={leadNurtureTelecallers}
+        onAssign={handleAutoAssign}
+      />
 
       <Card className="border border-slate-200/80 bg-white/80 backdrop-blur-sm shadow-lg overflow-hidden">
         <CardContent className="p-6">
