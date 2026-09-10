@@ -12,6 +12,32 @@ export type TelecallerPatient = {
   convertedAt?: string
 }
 
+export type TelecallerCallLog = {
+  id: string
+  patientName: string
+  patientPhone: string
+  callType: "outbound" | "inbound"
+  outcome: "connected" | "interested" | "converted" | "follow_up" | "not_connected" | "busy"
+  durationSeconds: number
+  durationFormatted: string
+  calledAt: string
+  notes?: string
+}
+
+export type TelecallerWeeklyTrend = {
+  day: string
+  outbound: number
+  inbound: number
+  connected: number
+  conversions: number
+}
+
+export type TelecallerOutcomeBreakdown = {
+  name: string
+  value: number
+  color: string
+}
+
 export type TelecallerPerformance = {
   patientCount: number
   totalCalls: number
@@ -22,7 +48,11 @@ export type TelecallerPerformance = {
   conversions: number
   conversionRate: number
   avgCallsPerDay: number
+  avgCallDurationSeconds: number
   joinedAt: string
+  weeklyTrends: TelecallerWeeklyTrend[]
+  outcomesBreakdown: TelecallerOutcomeBreakdown[]
+  recentCallLogs: TelecallerCallLog[]
 }
 
 const PATIENT_NAMES = [
@@ -41,11 +71,28 @@ const PATIENT_NAMES = [
   "Arjun Malhotra",
   "Divya Rao",
   "Karan Gill",
+  "Pooja Verma",
+  "Rajesh Kulkarni",
+  "Deepika Padukone",
+  "Manoj Bajpayee",
+  "Sunita Chauhan"
 ]
 
-const SPECIALTIES = ["Weight Management", "Diabetes Free Forever", "Thyroid Free Forever"]
-const SOURCES = ["Facebook", "Instagram", "Website", "App"]
+const SPECIALTIES = ["Weight Management", "Diabetes Free Forever", "Thyroid Free Forever", "PCOS Care", "Hypertension Control"]
+const SOURCES = ["Facebook", "Instagram", "Website", "App", "Referral", "Google Ads"]
 const STATUSES = ["new", "contacted", "follow_up", "interested", "converted", "not_connected"]
+
+const CALL_NOTES = [
+  "Detailed discussion regarding lifestyle habits and medication schedule. Patient is receptive.",
+  "Interested in 3-month reversal protocol. Requested callback on weekend.",
+  "Booked consultation with chief dietitian. Sent confirmation via WhatsApp.",
+  "Call was interrupted; promised to review onboarding brochure tonight.",
+  "Discussed diabetes baseline HbA1c test reports. Very keen to proceed.",
+  "Follow-up call regarding customized diet requirements.",
+  "Patient confirmed payment for primary clinical assessment.",
+  "Busy in a meeting, scheduled a callback tomorrow morning at 11 AM.",
+  "Answered doubts regarding kit shipment and doctor follow-up frequency."
+]
 
 function hashString(value: string): number {
   let hash = 0
@@ -56,19 +103,79 @@ function hashString(value: string): number {
   return Math.abs(hash)
 }
 
+function formatDuration(seconds: number): string {
+  const mins = Math.floor(seconds / 60)
+  const secs = seconds % 60
+  if (mins === 0) return `${secs}s`
+  return `${mins}m ${secs}s`
+}
+
+export function buildTelecallerCallLogs(telecaller: Pick<Telecaller, "id" | "name">, count = 12): TelecallerCallLog[] {
+  const hash = hashString(telecaller.id)
+  const outcomes: TelecallerCallLog["outcome"][] = ["converted", "interested", "follow_up", "connected", "not_connected", "busy"]
+
+  return Array.from({ length: count }, (_, index) => {
+    const itemHash = hash + index * 23
+    const patientName = PATIENT_NAMES[itemHash % PATIENT_NAMES.length]
+    const outcome = outcomes[itemHash % outcomes.length]
+    const isOutbound = (itemHash % 5) !== 0
+    const durationSeconds = outcome === "not_connected" || outcome === "busy" ? 0 : 75 + (itemHash % 320)
+
+    const date = new Date()
+    date.setHours(date.getHours() - (index * 4 + (itemHash % 5)))
+
+    return {
+      id: `CALL-${telecaller.id.slice(0, 4)}-${1000 + index}`,
+      patientName,
+      patientPhone: `+91 98${String(10000000 + itemHash).slice(0, 8)}`,
+      callType: isOutbound ? "outbound" : "inbound",
+      outcome,
+      durationSeconds,
+      durationFormatted: formatDuration(durationSeconds),
+      calledAt: date.toISOString(),
+      notes: CALL_NOTES[itemHash % CALL_NOTES.length]
+    }
+  })
+}
+
 export function buildTelecallerPerformance(telecaller: Pick<Telecaller, "id" | "name">): TelecallerPerformance {
   const hash = hashString(telecaller.id)
-  const patientCount = 12 + (hash % 28)
-  const totalCalls = patientCount * (3 + (hash % 5))
-  const outboundCalls = Math.round(totalCalls * 0.88)
+  const patientCount = 14 + (hash % 26)
+  const totalCalls = patientCount * (4 + (hash % 4))
+  const outboundCalls = Math.round(totalCalls * 0.84)
   const inboundCalls = totalCalls - outboundCalls
-  const connectedCalls = Math.round(totalCalls * (0.42 + (hash % 15) / 100))
-  const contactedCount = Math.min(patientCount, Math.round(connectedCalls * 0.92))
-  const conversions = Math.max(1, Math.round(contactedCount * (0.12 + (hash % 10) / 100)))
+  const connectedCalls = Math.round(totalCalls * (0.52 + (hash % 15) / 100))
+  const contactedCount = Math.min(patientCount, Math.round(connectedCalls * 0.88))
+  const conversions = Math.max(2, Math.round(contactedCount * (0.16 + (hash % 12) / 100)))
   const conversionRate = contactedCount > 0 ? Number(((conversions / contactedCount) * 100).toFixed(1)) : 0
 
   const joinedDate = new Date()
-  joinedDate.setMonth(joinedDate.getMonth() - (3 + (hash % 18)))
+  joinedDate.setMonth(joinedDate.getMonth() - (4 + (hash % 14)))
+
+  const daysOfWeek = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"]
+  const weeklyTrends: TelecallerWeeklyTrend[] = daysOfWeek.map((day, idx) => {
+    const dayHash = hash + idx * 11
+    const dayOutbound = 12 + (dayHash % 16)
+    const dayInbound = 2 + (dayHash % 5)
+    const dayConnected = Math.round((dayOutbound + dayInbound) * 0.65)
+    const dayConversions = Math.round((dayHash % 4))
+    return {
+      day,
+      outbound: dayOutbound,
+      inbound: dayInbound,
+      connected: dayConnected,
+      conversions: dayConversions
+    }
+  })
+
+  const outcomesBreakdown: TelecallerOutcomeBreakdown[] = [
+    { name: "Converted", value: conversions, color: "#10b981" },
+    { name: "Interested / Follow-up", value: Math.max(1, contactedCount - conversions), color: "#f59e0b" },
+    { name: "Connected General", value: Math.max(1, connectedCalls - contactedCount), color: "#3b82f6" },
+    { name: "Unreachable / Busy", value: Math.max(1, totalCalls - connectedCalls), color: "#f43f5e" }
+  ]
+
+  const recentCallLogs = buildTelecallerCallLogs(telecaller, 12)
 
   return {
     patientCount,
@@ -79,8 +186,12 @@ export function buildTelecallerPerformance(telecaller: Pick<Telecaller, "id" | "
     connectedCalls,
     conversions,
     conversionRate,
-    avgCallsPerDay: Number((totalCalls / 30).toFixed(1)),
+    avgCallsPerDay: Number((totalCalls / 26).toFixed(1)),
+    avgCallDurationSeconds: 165 + (hash % 60),
     joinedAt: joinedDate.toISOString(),
+    weeklyTrends,
+    outcomesBreakdown,
+    recentCallLogs
   }
 }
 
@@ -129,7 +240,11 @@ export function enrichTelecaller(telecaller: Telecaller): Telecaller {
     conversions: telecaller.conversions ?? performance.conversions,
     conversionRate: telecaller.conversionRate ?? performance.conversionRate,
     avgCallsPerDay: telecaller.avgCallsPerDay ?? performance.avgCallsPerDay,
+    avgCallDurationSeconds: telecaller.avgCallDurationSeconds ?? performance.avgCallDurationSeconds,
     joinedAt: telecaller.joinedAt ?? performance.joinedAt,
+    weeklyTrends: telecaller.weeklyTrends ?? performance.weeklyTrends,
+    outcomesBreakdown: telecaller.outcomesBreakdown ?? performance.outcomesBreakdown,
+    recentCallLogs: telecaller.recentCallLogs ?? performance.recentCallLogs,
     status: telecaller.is_active === false ? "inactive" : "active",
   }
 }

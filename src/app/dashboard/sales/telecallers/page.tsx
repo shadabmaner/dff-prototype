@@ -17,17 +17,23 @@ export default function SalesTelecallersPage() {
     const activeCount = telecallers.filter((item) => item.is_active !== false).length
     const totalPatients = telecallers.reduce((sum, item) => sum + (item.patientCount ?? 0), 0)
     const totalCalls = telecallers.reduce((sum, item) => sum + (item.totalCalls ?? 0), 0)
+    const totalOutbound = telecallers.reduce((sum, item) => sum + (item.outboundCalls ?? 0), 0)
+    const totalContacted = telecallers.reduce((sum, item) => sum + (item.contactedCount ?? 0), 0)
     const totalConversions = telecallers.reduce((sum, item) => sum + (item.conversions ?? 0), 0)
     const avgConversionRate =
-      telecallers.length > 0
-        ? telecallers.reduce((sum, item) => sum + (item.conversionRate ?? 0), 0) / telecallers.length
-        : 0
+      totalContacted > 0
+        ? (totalConversions / totalContacted) * 100
+        : telecallers.length > 0
+          ? telecallers.reduce((sum, item) => sum + (item.conversionRate ?? 0), 0) / telecallers.length
+          : 0
 
     return {
       activeCount,
       totalTelecallers: telecallers.length,
       totalPatients,
       totalCalls,
+      totalOutbound,
+      totalContacted,
       totalConversions,
       avgConversionRate,
     }
@@ -58,9 +64,12 @@ export default function SalesTelecallersPage() {
       <div className="space-y-4">
         <div className="flex flex-col gap-5 md:flex-row md:items-start md:justify-between">
           <div>
-            <h1 className="text-3xl md:text-4xl font-bold text-slate-900 tracking-tight">Telecallers</h1>
-            <p className="mt-2 text-sm text-slate-600">
-              Manage telecaller accounts, monitor performance, and review assigned patient lists
+            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-blue-100/80 text-blue-800 text-xs font-semibold mb-2">
+              Sales Management Hub
+            </div>
+            <h1 className="text-3xl md:text-4xl font-bold text-slate-900 tracking-tight">Telecallers Overview & Analysis</h1>
+            <p className="mt-1 text-sm text-slate-600">
+              Manage active/inactive telecaller accounts, monitor till-date call & conversion performance, and review assigned patient lists
             </p>
           </div>
         </div>
@@ -72,28 +81,28 @@ export default function SalesTelecallersPage() {
           value={`${summary.activeCount}/${summary.totalTelecallers}`}
           icon={UserCheck}
           gradient="from-[#1F56A3] to-[#192B42]"
-          subtitle="Currently enabled accounts"
+          subtitle={`${summary.totalTelecallers - summary.activeCount} inactive accounts`}
         />
         <StatCard
           title="Assigned Patients"
           value={summary.totalPatients.toLocaleString("en-IN")}
           icon={Users}
           gradient="from-[#1F56A3] to-[#FFC20E]"
-          subtitle="Across all telecallers"
+          subtitle={`${summary.totalContacted.toLocaleString("en-IN")} contacted persons`}
         />
         <StatCard
-          title="Total Calls"
+          title="Total Calls Till Date"
           value={summary.totalCalls.toLocaleString("en-IN")}
           icon={PhoneCall}
           gradient="from-[#FFC20E] to-[#1F56A3]"
-          subtitle="Outbound and inbound combined"
+          subtitle={`${summary.totalOutbound.toLocaleString("en-IN")} outbound calls`}
         />
         <StatCard
           title="Total Conversions"
           value={summary.totalConversions.toLocaleString("en-IN")}
           icon={TrendingUp}
           gradient="from-emerald-500 to-teal-600"
-          subtitle={`${summary.avgConversionRate.toFixed(1)}% avg conversion rate`}
+          subtitle={`${summary.avgConversionRate.toFixed(1)}% conversion rate`}
         />
       </div>
 

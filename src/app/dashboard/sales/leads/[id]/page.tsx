@@ -14,8 +14,23 @@ export default function LeadDetailsPage() {
   const searchParams = useSearchParams()
   const id = params.id
   const fromParam = searchParams?.get("from")
+  const telecallerId = searchParams?.get("telecallerId")
   const backFromAssignment = fromParam === "lead-assignment"
-  const patientName = searchParams?.get("name")
+  const backFromTelecaller = fromParam === "telecaller"
+
+  const backHref = backFromTelecaller
+    ? telecallerId
+      ? `/dashboard/sales/telecallers/${telecallerId}`
+      : "/dashboard/sales/telecallers"
+    : backFromAssignment
+      ? "/dashboard/sales/lead-assignment"
+      : undefined
+
+  const backLabel = backFromTelecaller
+    ? "Back to Telecaller"
+    : backFromAssignment
+      ? "Back to Lead Assignment"
+      : undefined
 
   const { data: lead, isLoading, error, refetch, isFetching } = useLead(id, { enabled: Boolean(id) })
 
@@ -40,8 +55,8 @@ export default function LeadDetailsPage() {
   return (
     <LeadDetailsDietTheme
       lead={lead}
-      backHref={backFromAssignment ? "/dashboard/sales/lead-assignment" : undefined}
-      backLabel={backFromAssignment ? "Back to Lead Assignment" : undefined}
+      backHref={backHref}
+      backLabel={backLabel}
     />
   )
 }

@@ -1,7 +1,12 @@
 import { useQuery } from "@tanstack/react-query"
 
 import { apiClient } from "@/lib/api-client"
-import { enrichTelecaller } from "@/lib/sales/telecaller-metrics"
+import {
+  enrichTelecaller,
+  type TelecallerCallLog,
+  type TelecallerOutcomeBreakdown,
+  type TelecallerWeeklyTrend,
+} from "@/lib/sales/telecaller-metrics"
 
 export interface Telecaller {
   id: string
@@ -19,7 +24,11 @@ export interface Telecaller {
   conversions?: number
   conversionRate?: number
   avgCallsPerDay?: number
+  avgCallDurationSeconds?: number
   joinedAt?: string
+  weeklyTrends?: TelecallerWeeklyTrend[]
+  outcomesBreakdown?: TelecallerOutcomeBreakdown[]
+  recentCallLogs?: TelecallerCallLog[]
 }
 
 export function useTelecallers(options?: { enabled?: boolean }) {

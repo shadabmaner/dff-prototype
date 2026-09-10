@@ -5,8 +5,10 @@ import Link from "next/link"
 import { useRouter } from "next/navigation"
 import {
   ArrowRight,
+  ClipboardList,
   Mail,
   Phone,
+  PhoneCall,
   RefreshCw,
   Search,
   Users,
@@ -82,7 +84,7 @@ export function TelecallersTable({ data, onRefresh, isRefreshing }: TelecallersT
           <div className="relative flex-1">
             <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
             <Input
-              placeholder="Search by name, email or phone"
+              placeholder="Search by telecaller name, email or phone..."
               value={searchTerm}
               onChange={(event) => setSearchTerm(event.target.value)}
               className="h-11 rounded-xl border-slate-200 pl-9 text-sm"
@@ -94,8 +96,8 @@ export function TelecallersTable({ data, onRefresh, isRefreshing }: TelecallersT
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="all">All statuses</SelectItem>
-              <SelectItem value="active">Active</SelectItem>
-              <SelectItem value="inactive">Inactive</SelectItem>
+              <SelectItem value="active">Active Only</SelectItem>
+              <SelectItem value="inactive">Inactive Only</SelectItem>
             </SelectContent>
           </Select>
           {onRefresh ? (
@@ -116,15 +118,15 @@ export function TelecallersTable({ data, onRefresh, isRefreshing }: TelecallersT
         <div className="max-h-[70vh] overflow-auto">
           <Table>
             <TableHeader>
-              <TableRow className="border-b border-slate-100/80 bg-slate-50/40 hover:bg-slate-50/40">
-                <TableHead className="px-4 py-4 text-[10px] font-black uppercase tracking-[0.28em] text-slate-400 first:pl-6">Telecaller</TableHead>
-                <TableHead className="px-4 py-4 text-[10px] font-black uppercase tracking-[0.28em] text-slate-400">Contact</TableHead>
-                <TableHead className="px-4 py-4 text-[10px] font-black uppercase tracking-[0.28em] text-slate-400">Status</TableHead>
-                <TableHead className="px-4 py-4 text-[10px] font-black uppercase tracking-[0.28em] text-slate-400 text-center">Patients</TableHead>
-                <TableHead className="px-4 py-4 text-[10px] font-black uppercase tracking-[0.28em] text-slate-400 text-center">Total Calls</TableHead>
-                <TableHead className="px-4 py-4 text-[10px] font-black uppercase tracking-[0.28em] text-slate-400 text-center">Contacted</TableHead>
-                <TableHead className="px-4 py-4 text-[10px] font-black uppercase tracking-[0.28em] text-slate-400 text-center">Conversions</TableHead>
-                <TableHead className="px-4 py-4 text-[10px] font-black uppercase tracking-[0.28em] text-slate-400 text-right last:pr-6">Patient List</TableHead>
+              <TableRow className="border-b border-slate-100/80 bg-slate-50/60 hover:bg-slate-50/60">
+                <TableHead className="px-4 py-4 text-[11px] font-bold uppercase tracking-wider text-slate-500 first:pl-6">Telecaller</TableHead>
+                <TableHead className="px-4 py-4 text-[11px] font-bold uppercase tracking-wider text-slate-500">Contact</TableHead>
+                <TableHead className="px-4 py-4 text-[11px] font-bold uppercase tracking-wider text-slate-500 text-center">Account Status</TableHead>
+                <TableHead className="px-4 py-4 text-[11px] font-bold uppercase tracking-wider text-slate-500 text-center">Patients</TableHead>
+                <TableHead className="px-4 py-4 text-[11px] font-bold uppercase tracking-wider text-slate-500 text-center">Total Calls</TableHead>
+                <TableHead className="px-4 py-4 text-[11px] font-bold uppercase tracking-wider text-slate-500 text-center">Contacted Persons</TableHead>
+                <TableHead className="px-4 py-4 text-[11px] font-bold uppercase tracking-wider text-slate-500 text-center">Conversions</TableHead>
+                <TableHead className="px-4 py-4 text-[11px] font-bold uppercase tracking-wider text-slate-500 text-right last:pr-6">Patient List</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -137,23 +139,23 @@ export function TelecallersTable({ data, onRefresh, isRefreshing }: TelecallersT
                   return (
                     <TableRow
                       key={telecaller.id}
-                      className="border-b border-slate-100/70 transition-colors hover:bg-primary/5 cursor-pointer"
+                      className="border-b border-slate-100/70 transition-colors hover:bg-slate-50/80 cursor-pointer"
                       onClick={() => router.push(`/dashboard/sales/telecallers/${telecaller.id}`)}
                     >
                       <TableCell className="px-4 py-4 align-middle first:pl-6">
                         <div className="flex items-center gap-3">
-                          <div className="flex h-10 w-10 items-center justify-center rounded-full bg-primary/10 text-sm font-semibold text-primary">
+                          <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-[#1F56A3]/10 text-sm font-bold text-[#1F56A3]">
                             {getInitials(telecaller.name)}
                           </div>
                           <div>
                             <Link
                               href={`/dashboard/sales/telecallers/${telecaller.id}`}
-                              className="text-sm font-semibold text-foreground hover:underline"
+                              className="text-sm font-semibold text-slate-900 hover:text-primary hover:underline"
                               onClick={(event) => event.stopPropagation()}
                             >
                               {telecaller.name || "Unnamed Telecaller"}
                             </Link>
-                            <p className="text-xs text-muted-foreground">
+                            <p className="text-xs text-slate-500">
                               {telecaller.conversionRate?.toFixed(1)}% conversion rate
                             </p>
                           </div>
@@ -161,19 +163,19 @@ export function TelecallersTable({ data, onRefresh, isRefreshing }: TelecallersT
                       </TableCell>
                       <TableCell className="px-4 py-4 align-middle">
                         <div className="space-y-1">
-                          <div className="flex items-center gap-1.5 text-sm text-foreground">
-                            <Phone className="h-3.5 w-3.5 text-muted-foreground" />
+                          <div className="flex items-center gap-1.5 text-sm font-medium text-slate-800">
+                            <Phone className="h-3.5 w-3.5 text-slate-400" />
                             {telecaller.phone || "—"}
                           </div>
-                          <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
-                            <Mail className="h-3 w-3" />
+                          <div className="flex items-center gap-1.5 text-xs text-slate-500">
+                            <Mail className="h-3 w-3 text-slate-400" />
                             {telecaller.email || "—"}
                           </div>
                         </div>
                       </TableCell>
                       <TableCell className="px-4 py-4 align-middle" onClick={(event) => event.stopPropagation()}>
-                        <div className="flex items-center gap-3">
-                          <Badge variant="secondary" className={`${status.className} border-0 text-xs font-semibold`}>
+                        <div className="flex items-center justify-center gap-2.5">
+                          <Badge variant="secondary" className={`${status.className} border-0 text-xs font-semibold px-2.5 py-0.5`}>
                             {status.label}
                           </Badge>
                           <Switch
@@ -181,40 +183,54 @@ export function TelecallersTable({ data, onRefresh, isRefreshing }: TelecallersT
                             disabled={updateStatus.isPending}
                             onCheckedChange={(checked) => handleStatusToggle(telecaller, checked)}
                             aria-label={`Toggle ${telecaller.name} account status`}
+                            title={isActive ? "Deactivate Telecaller" : "Activate Telecaller"}
                           />
                         </div>
                       </TableCell>
                       <TableCell className="px-4 py-4 text-center align-middle">
                         <span className="text-sm font-bold text-slate-900 tabular-nums">
-                          {telecaller.patientCount?.toLocaleString("en-IN") ?? "—"}
+                          {telecaller.patientCount?.toLocaleString("en-IN") ?? "0"}
                         </span>
+                        <p className="text-[11px] text-slate-400">Assigned</p>
                       </TableCell>
                       <TableCell className="px-4 py-4 text-center align-middle">
-                        <span className="text-sm font-semibold text-slate-800 tabular-nums">
-                          {telecaller.totalCalls?.toLocaleString("en-IN") ?? "—"}
+                        <span className="text-sm font-semibold text-slate-900 tabular-nums">
+                          {telecaller.totalCalls?.toLocaleString("en-IN") ?? "0"}
                         </span>
+                        <p className="text-[11px] text-slate-400">
+                          {telecaller.outboundCalls ?? 0} outbound
+                        </p>
                       </TableCell>
                       <TableCell className="px-4 py-4 text-center align-middle">
-                        <span className="text-sm font-semibold text-slate-800 tabular-nums">
-                          {telecaller.contactedCount?.toLocaleString("en-IN") ?? "—"}
+                        <span className="text-sm font-semibold text-slate-900 tabular-nums">
+                          {telecaller.contactedCount?.toLocaleString("en-IN") ?? "0"}
                         </span>
+                        <p className="text-[11px] text-slate-400">
+                          {telecaller.patientCount ? Math.round(((telecaller.contactedCount ?? 0) / telecaller.patientCount) * 100) : 0}% contacted
+                        </p>
                       </TableCell>
                       <TableCell className="px-4 py-4 text-center align-middle">
-                        <span className="text-sm font-bold text-emerald-700 tabular-nums">
-                          {telecaller.conversions?.toLocaleString("en-IN") ?? "—"}
+                        <span className="text-sm font-bold text-emerald-600 tabular-nums">
+                          {telecaller.conversions?.toLocaleString("en-IN") ?? "0"}
                         </span>
+                        <p className="text-[11px] text-emerald-600/80 font-medium">
+                          {telecaller.conversionRate?.toFixed(1)}% rate
+                        </p>
                       </TableCell>
                       <TableCell className="px-4 py-4 text-right align-middle last:pr-6" onClick={(event) => event.stopPropagation()}>
                         <Button
-                          variant="outline"
+                          variant="default"
                           size="sm"
-                          className="rounded-full"
+                          className="bg-[#1F56A3] hover:bg-[#192B42] text-white rounded-xl shadow-sm text-xs font-semibold h-9 px-3.5"
                           asChild
                         >
-                          <Link href={`/dashboard/sales/telecallers/${telecaller.id}`}>
-                            <Users className="mr-2 h-4 w-4" />
-                            View
-                            <ArrowRight className="ml-2 h-3.5 w-3.5" />
+                          <Link href={`/dashboard/sales/telecallers/${telecaller.id}?tab=patients`}>
+                            <ClipboardList className="mr-1.5 h-3.5 w-3.5" />
+                            Patient List
+                            <span className="ml-1.5 rounded-full bg-white/20 px-1.5 py-0.2 text-[11px]">
+                              {telecaller.patientCount ?? 0}
+                            </span>
+                            <ArrowRight className="ml-1.5 h-3 w-3" />
                           </Link>
                         </Button>
                       </TableCell>
