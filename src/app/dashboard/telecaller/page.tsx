@@ -835,14 +835,24 @@ export default function TelecallerDashboardPage() {
                   </CardDescription>
                 </div>
 
-                <div className="relative w-64">
-                  <Search className="absolute left-3 top-2.5 h-3.5 w-3.5 text-slate-400" />
-                  <Input
-                    placeholder="Search patient or phone..."
-                    value={search}
-                    onChange={(e) => setSearch(e.target.value)}
-                    className="pl-8 h-9 text-xs rounded-xl"
-                  />
+                <div className="flex items-center gap-2.5">
+                  <div className="relative w-56">
+                    <Search className="absolute left-3 top-2.5 h-3.5 w-3.5 text-slate-400" />
+                    <Input
+                      placeholder="Search patient or phone..."
+                      value={search}
+                      onChange={(e) => setSearch(e.target.value)}
+                      className="pl-8 h-9 text-xs rounded-xl"
+                    />
+                  </div>
+                  <Link href="/dashboard/telecaller/residential-camp">
+                    <Button
+                      size="sm"
+                      className="bg-purple-700 hover:bg-purple-800 text-white font-bold h-9 text-xs rounded-xl shadow-sm"
+                    >
+                      Open Camp Queue & Bulk Actions →
+                    </Button>
+                  </Link>
                 </div>
               </div>
             </CardHeader>
@@ -926,6 +936,15 @@ export default function TelecallerDashboardPage() {
                               <PhoneCall className="mr-1 h-3.5 w-3.5" />
                               Log Call
                             </Button>
+                            <Link href={`/dashboard/telecaller/residential-camp/${item.id}`}>
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                className="h-8 text-xs font-bold rounded-xl border-slate-200 text-slate-700 hover:bg-slate-50"
+                              >
+                                Details
+                              </Button>
+                            </Link>
                           </div>
                         </TableCell>
                       </TableRow>
