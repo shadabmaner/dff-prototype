@@ -7,6 +7,7 @@ import {
   Activity,
   Apple,
   ArrowUpRight,
+  Award,
   BarChart,
   Bell,
   BookOpen,
@@ -74,6 +75,8 @@ import {
 import { cn } from "@/lib/utils"
 import { useAuth } from "@/contexts/auth-context"
 import Image from "next/image"
+import { TelecallerSidebarCard } from "@/components/telecaller/telecaller-role-switcher"
+import { useTelecallerRoleStore } from "@/store/telecaller-role-store"
 
 type NavItem = {
   title: string
@@ -125,12 +128,12 @@ const sections: NavSection[] = [
   },
   {
     label: "Telecaller",
-    description: "Call management",
+    description: "Specialized call desk",
     user_type: "tele_caller",
     items: [
       { title: "Dashboard", href: "/dashboard/telecaller", icon: LayoutDashboard },
-      { title: "Assigned Leads", href: "/dashboard/telecaller/assigned-leads", icon: Users },
-      { title: "Call Log", href: "/dashboard/telecaller/call-desk", icon: Headset },
+      { title: "Welcome Call Management", href: "/dashboard/telecaller/welcome-calls", icon: PhoneCall },
+      { title: "Call Logs", href: "/dashboard/telecaller/call-desk", icon: Headset },
     ],
   },
   {
@@ -317,26 +320,78 @@ export function Sidebar({ isCollapsed, onToggle }: SidebarProps) {
   const email = user?.email ?? ""
   const canViewAllSections = role === "admin" || role === "super_admin"
 
+  const { currentRole, getProfile } = useTelecallerRoleStore()
+  const telecallerProfile = getProfile()
+
+  const isTelecallerPath = pathname.startsWith("/dashboard/telecaller")
+  const isTelecallerRole = role === "tele_caller" || role === "telecaller"
+
+  const displayRole = (isTelecallerRole || isTelecallerPath)
+    ? telecallerProfile.roleTitle
+    : role?.replace(/_/g, " ") ?? "User"
+
+  const getTelecallerSectionItems = () => {
+    switch (currentRole) {
+      case "welcome_call":
+        return [
+          { title: "Dashboard", href: "/dashboard/telecaller", icon: LayoutDashboard },
+          { title: "Welcome Call Management", href: "/dashboard/telecaller/welcome-calls", icon: PhoneCall },
+          { title: "Call Logs", href: "/dashboard/telecaller/call-desk", icon: Headset },
+        ]
+      case "payment_recovery":
+        return [
+          { title: "Dashboard", href: "/dashboard/telecaller", icon: LayoutDashboard },
+          { title: "Payment Recovery", href: "/dashboard/telecaller/payment-recovery", icon: IndianRupee },
+          { title: "Call Logs", href: "/dashboard/telecaller/call-desk", icon: Headset },
+        ]
+      case "residential_camp":
+        return [
+          { title: "Dashboard", href: "/dashboard/telecaller", icon: LayoutDashboard },
+          { title: "Residential Camp", href: "/dashboard/telecaller/residential-camp", icon: Sparkles },
+          { title: "Call Logs", href: "/dashboard/telecaller/call-desk", icon: Headset },
+        ]
+      case "lead_nurture":
+      default:
+        return [
+          { title: "Dashboard", href: "/dashboard/telecaller", icon: LayoutDashboard },
+          { title: "Lead Management", href: "/dashboard/telecaller/assigned-leads", icon: Users },
+          { title: "Call Logs", href: "/dashboard/telecaller/call-desk", icon: Headset },
+        ]
+    }
+  }
+
   const visibleSections = sections
     .filter((section) => {
       if (!section.user_type) return true
+      if ((isTelecallerRole || isTelecallerPath) && (section.user_type === "tele_caller" || section.user_type === "telecaller")) {
+        return true
+      }
       return section.user_type == role
     })
-    .map((section) => ({
-      ...section,
-      items: section.items.filter((link: any) => {
-        if (link.user_type?.length) {
-          return role ? link.user_type.includes(role) : false
+    .map((section) => {
+      if (section.user_type === "tele_caller" || section.user_type === "telecaller") {
+        return {
+          ...section,
+          label: telecallerProfile.roleTitle,
+          description: telecallerProfile.department,
+          items: getTelecallerSectionItems(),
         }
-        if (link.roles?.length) {
-          return role ? link.roles.includes(role) : false
-        }
-        return true
-      }),
-    }))
+      }
+      return {
+        ...section,
+        items: section.items.filter((link: any) => {
+          if (link.user_type?.length) {
+            return role ? link.user_type.includes(role) : false
+          }
+          if (link.roles?.length) {
+            return role ? link.roles.includes(role) : false
+          }
+          return true
+        }),
+      }
+    })
     .filter((section) => section.items.length > 0)
   const shortcutItems = visibleSections.flatMap((section) => section.items.slice(0, 1)).slice(0, 3)
-  const displayRole = role?.replace(/_/g, " ") ?? "User"
 
   return (
     <aside
@@ -513,7 +568,9 @@ function SidebarLink({
 }
 
 function SidebarFooter({ isCollapsed, name, email }: { isCollapsed: boolean; name: string; email: string }) {
-  const { signOut } = useAuth()
+  const { user, signOut } = useAuth()
+  const pathname = usePathname()
+  const isTelecaller = pathname.startsWith("/dashboard/telecaller") || user?.user_type === "tele_caller" || user?.user_type === "telecaller"
 
   const handleLogout = async () => {
     try {
@@ -529,7 +586,10 @@ function SidebarFooter({ isCollapsed, name, email }: { isCollapsed: boolean; nam
   }
 
   return (
-    <div className="mt-auto border-t border-white/10 px-4 py-4 text-white/80">
+    <div className="mt-auto border-t border-white/10 px-4 py-4 text-white/80 space-y-3">
+      {!isCollapsed && isTelecaller && (
+        <TelecallerSidebarCard />
+      )}
       <div className="flex items-center gap-3">
         <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-primary text-white text-sm font-bold shadow-md shadow-black/20">
           {name.slice(0, 2).toUpperCase()}

@@ -1,193 +1,1017 @@
 "use client"
 
 import * as React from "react"
-import type { LucideIcon } from "lucide-react"
-import { AlertCircle, CheckCircle, Clock, Phone, TrendingUp, Users, Activity } from "lucide-react"
+import {
+  PhoneCall,
+  IndianRupee,
+  Sparkles,
+  Users,
+  Clock,
+  CheckCircle2,
+  Calendar,
+  Layers,
+  ArrowRight,
+  ShieldCheck,
+  UserCheck,
+  Search,
+  ExternalLink,
+  Receipt,
+  MapPin,
+  AlertCircle,
+  TrendingUp,
+} from "lucide-react"
 
 import { Badge } from "@/components/ui/badge"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { Skeleton } from "@/components/ui/skeleton"
 import { Button } from "@/components/ui/button"
-import { useTelecallerDashboard, type TelecallerDashboardPayload } from "@/hooks/use-telecaller-dashboard"
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
+import { Input } from "@/components/ui/input"
 import { StatCard } from "@/components/ui/stat-card"
-import { SalesRecoveryOverview } from "@/components/sales/sales-recovery-overview"
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
+import { DateRangeFilter, type DateRangeFilterValue } from "@/components/shared/date-range-filter"
+import {
+  useTelecallerRoleStore,
+  type TelecallerRoleType,
+} from "@/store/telecaller-role-store"
+import { TelecallerRoleHeaderBadge } from "@/components/telecaller/telecaller-role-switcher"
 
-type MetricConfig = {
-  key: keyof TelecallerDashboardPayload
-  label: string
-  description: string
-  icon: LucideIcon
-  suffix?: string
+// Modals
+import { CareTeamAssignmentModal, type CareTeamData } from "@/components/telecaller/care-team-assignment-modal"
+import { WelcomeCallModal } from "@/components/telecaller/welcome-call-modal"
+import { ProgramMappingModal, type ProgramMappingResult } from "@/components/telecaller/program-mapping-modal"
+import { CollectPaymentModal } from "@/components/telecaller/collect-payment-modal"
+import { CampReminderModal, type CampReminderData } from "@/components/telecaller/camp-reminder-modal"
+import { CampCallLogModal } from "@/components/telecaller/camp-call-log-modal"
+
+// Types
+interface WelcomeItem {
+  id: string
+  name: string
+  phone: string
+  specialty: string
+  amountPaid: number
+  paymentDate: string
+  city: string
+  careTeamAssigned: boolean
+  careTeam?: CareTeamData
+  welcomeCallStatus: "pending" | "scheduled" | "completed"
+  callDuration?: number
 }
 
-const metricConfigs: MetricConfig[] = [
+interface RecoveryItem {
+  id: string
+  name: string
+  phone: string
+  programName: string
+  totalPlanValue: number
+  amountPaidSoFar: number
+  pendingBalance: number
+  dueDate: string
+  overdueDays: number
+  status: "pending_program_mapping" | "active_recovery" | "paid" | "follow_up"
+  installmentNumber: number
+  totalInstallments: number
+  isEnrollmentTokenOnly?: boolean
+  doctorName?: string
+  doctorNotes?: string
+}
+
+interface CampItem {
+  id: string
+  name: string
+  phone: string
+  protocol: string
+  tenureDays: number
+  clinicalImprovement: string
+  campLocation: string
+  status: "eligible" | "reminder_sent" | "call_logged" | "seat_reserved"
+  city: string
+  callNotes?: string
+}
+
+// Initial Mock Datasets
+const INITIAL_WELCOME_QUEUE: WelcomeItem[] = [
   {
-    key: "totalAssignedLeads",
-    label: "Total Assigned Leads",
-    description: "",
-    icon: Users,
+    id: "WP-101",
+    name: "Sunita Deshmukh",
+    phone: "+91 98201 44512",
+    specialty: "Diabetes Free Forever",
+    amountPaid: 24999,
+    paymentDate: "Today, 10:30 AM",
+    city: "Mumbai",
+    careTeamAssigned: false,
+    welcomeCallStatus: "pending",
   },
   {
-    key: "callsToday",
-    label: "Contacted Today",
-    description: "",
-    icon: Phone,
+    id: "WP-102",
+    name: "Rameshwar Patil",
+    phone: "+91 98450 78123",
+    specialty: "Diabetes Free Forever",
+    amountPaid: 24999,
+    paymentDate: "Today, 09:15 AM",
+    city: "Pune",
+    careTeamAssigned: true,
+    careTeam: {
+      doctor: "Dr. Ritu Agarwal",
+      dietitian: "Sneha Phadke",
+      fitnessCoach: "Rahul Patil",
+      mindsetCoach: "Dr. Manisha Joshi",
+      mentor: "Kavita Kulkarni",
+    },
+    welcomeCallStatus: "pending",
   },
- 
   {
-    key: "pendingFollowUps",
-    label: "Pending Follow-ups",
-    description: "",
-    icon: Clock,
+    id: "WP-103",
+    name: "Kavita Iyer",
+    phone: "+91 98231 66789",
+    specialty: "PCOS Care",
+    amountPaid: 14999,
+    paymentDate: "Yesterday",
+    city: "Bengaluru",
+    careTeamAssigned: true,
+    careTeam: {
+      doctor: "Dr. Anil Deshpande",
+      dietitian: "Pooja Sharma",
+      fitnessCoach: "Pooja Nair",
+      mindsetCoach: "Aarav Mehta",
+      mentor: "Suresh Sawant",
+    },
+    welcomeCallStatus: "completed",
+    callDuration: 15,
+  },
+]
+
+const INITIAL_RECOVERY_QUEUE: RecoveryItem[] = [
+  {
+    id: "REC-201",
+    name: "Vikram Malhotra",
+    phone: "+91 98201 98112",
+    programName: "Pending Mapping (Dr. Recommended: 50K Intensive)",
+    totalPlanValue: 50000,
+    amountPaidSoFar: 2499,
+    pendingBalance: 47501,
+    dueDate: "Immediate Mapping Required",
+    overdueDays: 0,
+    status: "pending_program_mapping",
+    installmentNumber: 1,
+    totalInstallments: 3,
+    isEnrollmentTokenOnly: true,
+    doctorName: "Dr. Ritu Agarwal",
+    doctorNotes: "HbA1c 8.9, 12 years diabetic. Needs 6-month intensive care. Coordinate agreed program with patient.",
   },
   {
-    key: "conversionRate",
-    label: "Conversion Rate",
-    description: "",
-    icon: TrendingUp,
-    suffix: "%",
+    id: "REC-202",
+    name: "Deepika Rao",
+    phone: "+91 98450 67341",
+    programName: "Pending Mapping (Dr. Recommended: 1 Lakh VIP)",
+    totalPlanValue: 100000,
+    amountPaidSoFar: 2499,
+    pendingBalance: 97501,
+    dueDate: "Assessment Completed Today",
+    overdueDays: 0,
+    status: "pending_program_mapping",
+    installmentNumber: 1,
+    totalInstallments: 3,
+    isEnrollmentTokenOnly: true,
+    doctorName: "Dr. Anil Deshpande",
+    doctorNotes: "Severe diabetic neuropathy. Doctor advised VIP continuous monitoring. Reconcile 2499 token.",
   },
-  
-] as const
+  {
+    id: "REC-203",
+    name: "Rajesh Kulkarni",
+    phone: "+91 98220 11984",
+    programName: "Diabetes Free Forever (DFF)",
+    totalPlanValue: 24999,
+    amountPaidSoFar: 10000,
+    pendingBalance: 14999,
+    dueDate: "3 Days Overdue",
+    overdueDays: 3,
+    status: "active_recovery",
+    installmentNumber: 2,
+    totalInstallments: 2,
+  },
+  {
+    id: "REC-204",
+    name: "Smita Joshi",
+    phone: "+91 98901 88722",
+    programName: "DFF Intensive Care",
+    totalPlanValue: 49999,
+    amountPaidSoFar: 25000,
+    pendingBalance: 24999,
+    dueDate: "7 Days Overdue",
+    overdueDays: 7,
+    status: "active_recovery",
+    installmentNumber: 2,
+    totalInstallments: 3,
+  },
+]
+
+const INITIAL_CAMP_QUEUE: CampItem[] = [
+  {
+    id: "CP-301",
+    name: "Harishchandra Mehta",
+    phone: "+91 98210 55432",
+    protocol: "DFF VIP Annual Reversal Care",
+    tenureDays: 110,
+    clinicalImprovement: "HbA1c: 9.1 → 6.9% (-4.5 kg, Insulin stopped)",
+    campLocation: "Lonavala Wellness Retreat",
+    status: "eligible",
+    city: "Mumbai",
+  },
+  {
+    id: "CP-302",
+    name: "Sunanda Kadam",
+    phone: "+91 98450 12908",
+    protocol: "DFF Standard Care (6 Months)",
+    tenureDays: 98,
+    clinicalImprovement: "HbA1c: 8.4 → 6.7% (Fasting 104 mg/dL)",
+    campLocation: "Lonavala Wellness Retreat",
+    status: "reminder_sent",
+    city: "Pune",
+  },
+  {
+    id: "CP-303",
+    name: "Ashok Singhania",
+    phone: "+91 98190 77654",
+    protocol: "DFF VIP Annual Reversal Care",
+    tenureDays: 125,
+    clinicalImprovement: "Off 40 units Lantus insulin, HbA1c 6.5%",
+    campLocation: "Mahabaleshwar Mountain Healing Camp",
+    status: "seat_reserved",
+    city: "Delhi",
+    callNotes: "Seat reserved @ ₹35,000. Flight to Pune booked for Oct 12.",
+  },
+]
 
 export default function TelecallerDashboardPage() {
-  const { data, isLoading, isError, error, refetch, isRefetching } = useTelecallerDashboard()
+  const { currentRole, setCurrentRole, getProfile } = useTelecallerRoleStore()
+  const profile = getProfile()
 
-  const metrics = React.useMemo(() => {
-    if (!data) return metricConfigs.map((config) => ({ ...config, value: undefined }))
+  const [dateFilter, setDateFilter] = React.useState<DateRangeFilterValue>({
+    preset: "last_7_days",
+    label: "Last 7 Days",
+  })
 
-    return metricConfigs.map((config) => {
-      const rawValue = data[config.key]
-      const value = typeof rawValue === "number" ? rawValue : 0
-      return { ...config, value }
-    })
-  }, [data])
+  const [search, setSearch] = React.useState("")
 
-  const recentActivity = data?.recentCallActivity ?? []
+  // Queues State
+  const [welcomeQueue, setWelcomeQueue] = React.useState<WelcomeItem[]>(INITIAL_WELCOME_QUEUE)
+  const [recoveryQueue, setRecoveryQueue] = React.useState<RecoveryItem[]>(INITIAL_RECOVERY_QUEUE)
+  const [campQueue, setCampQueue] = React.useState<CampItem[]>(INITIAL_CAMP_QUEUE)
 
-  const showSkeleton = isLoading || isRefetching
+  // Modal Triggers
+  const [activeWelcomePatient, setActiveWelcomePatient] = React.useState<WelcomeItem | null>(null)
+  const [isCareTeamModalOpen, setIsCareTeamModalOpen] = React.useState(false)
+  const [isWelcomeCallModalOpen, setIsWelcomeCallModalOpen] = React.useState(false)
+
+  const [activeRecoveryPatient, setActiveRecoveryPatient] = React.useState<RecoveryItem | null>(null)
+  const [isProgramMappingModalOpen, setIsProgramMappingModalOpen] = React.useState(false)
+  const [isCollectPaymentModalOpen, setIsCollectPaymentModalOpen] = React.useState(false)
+
+  const [activeCampPatient, setActiveCampPatient] = React.useState<CampItem | null>(null)
+  const [isCampReminderModalOpen, setIsCampReminderModalOpen] = React.useState(false)
+  const [isCampCallLogModalOpen, setIsCampCallLogModalOpen] = React.useState(false)
+
+  // Welcome Handlers
+  const handleSaveCareTeam = (patientId: string, team: CareTeamData) => {
+    setWelcomeQueue((prev) =>
+      prev.map((item) => (item.id === patientId ? { ...item, careTeamAssigned: true, careTeam: team } : item))
+    )
+  }
+
+  const handleCompleteWelcomeCall = (patientId: string, log: any) => {
+    setWelcomeQueue((prev) =>
+      prev.map((item) =>
+        item.id === patientId
+          ? {
+              ...item,
+              welcomeCallStatus: "completed",
+              callDuration: log.durationMins,
+            }
+          : item
+      )
+    )
+  }
+
+  // Recovery Handlers
+  const handleConfirmProgramMapping = (patientId: string, mapping: ProgramMappingResult) => {
+    setRecoveryQueue((prev) =>
+      prev.map((item) =>
+        item.id === patientId
+          ? {
+              ...item,
+              programName: mapping.programName,
+              totalPlanValue: mapping.totalFee,
+              pendingBalance: mapping.netBalanceDue,
+              status: "active_recovery",
+              isEnrollmentTokenOnly: false,
+              dueDate: "Phase 1 Due Now",
+            }
+          : item
+      )
+    )
+  }
+
+  const handleRecordPayment = (patientId: string, payment: any) => {
+    setRecoveryQueue((prev) =>
+      prev.map((item) =>
+        item.id === patientId
+          ? {
+              ...item,
+              amountPaidSoFar: item.amountPaidSoFar + payment.amount,
+              pendingBalance: Math.max(0, item.pendingBalance - payment.amount),
+              status: item.pendingBalance - payment.amount <= 0 ? "paid" : "active_recovery",
+            }
+          : item
+      )
+    )
+  }
+
+  // Camp Handlers
+  const handleSendCampReminder = (patientId: string, data: CampReminderData) => {
+    setCampQueue((prev) =>
+      prev.map((item) =>
+        item.id === patientId
+          ? {
+              ...item,
+              status: "reminder_sent",
+              campLocation: data.location.split("(")[0].trim(),
+            }
+          : item
+      )
+    )
+  }
+
+  const handleCompleteCampCall = (patientId: string, log: any) => {
+    setCampQueue((prev) =>
+      prev.map((item) =>
+        item.id === patientId
+          ? {
+              ...item,
+              status: log.status === "seat_reserved" ? "seat_reserved" : "call_logged",
+              callNotes: log.notes,
+            }
+          : item
+      )
+    )
+  }
 
   return (
     <div className="space-y-6 p-8 min-h-screen bg-gradient-to-br from-slate-50 via-blue-50/30 to-slate-50 rounded-[50px]">
-      {/* Header */}
-      <div className="space-y-4">
-      
-        <div className="flex flex-col gap-5 md:flex-row md:items-start md:justify-between">
-          <div>
-            <h1 className="text-3xl md:text-4xl font-bold text-slate-900 tracking-tight">Telecaller Dashboard</h1>
+      {/* Header & Role Switcher */}
+      <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+        <div>
+          <div className="flex items-center gap-3">
+            <h1 className="text-3xl md:text-4xl font-bold text-slate-900 tracking-tight">
+              Telecaller Operations Cockpit
+            </h1>
+            <Badge variant="outline" className="bg-blue-50 text-[#1F56A3] border-blue-200 font-bold text-xs py-0.5">
+              {profile.roleTitle}
+            </Badge>
           </div>
-         
+          <p className="text-xs text-slate-500 mt-1">
+            Logged in as <span className="font-bold text-slate-800">{profile.name}</span> · {profile.department}
+          </p>
+        </div>
+
+        <div className="flex flex-wrap items-center gap-2.5">
+          {/* Universal Date Range Filter */}
+          <DateRangeFilter value={dateFilter} onChange={setDateFilter} />
+
+          {/* Quick Role Switcher Pill */}
+          <TelecallerRoleHeaderBadge />
         </div>
       </div>
 
-      {isError && (
-        <Card className="border-0 bg-gradient-to-br from-rose-50 to-pink-50 shadow-lg">
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-bold text-rose-900">Unable to load dashboard</CardTitle>
-            <AlertCircle className="h-4 w-4 text-rose-600" />
-          </CardHeader>
-          <CardContent className="flex items-center justify-between">
-            <p className="text-sm text-rose-700">{error?.message ?? "Something went wrong"}</p>
-            <Button
-              onClick={() => refetch()}
-              variant="outline"
-              size="sm"
-              className="border-rose-300 text-rose-700 hover:bg-rose-100"
-            >
-              Retry
-            </Button>
-          </CardContent>
-        </Card>
+      {/* VIEW 1: WELCOME CALL SPECIALIST */}
+      {currentRole === "welcome_call" && (
+        <div className="space-y-6">
+          {/* KPI Cards */}
+          <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
+            <StatCard
+              title="Today's Assignments for Me"
+              value="18"
+              icon={PhoneCall}
+              gradient="from-[#1F56A3] to-[#192B42]"
+              subtitle={`Allocated by manager (${dateFilter.label})`}
+            />
+            <StatCard
+              title="Care Teams Assigned"
+              value="42"
+              icon={UserCheck}
+              gradient="from-blue-600 to-indigo-800"
+              subtitle="5 specialists mapped to patient"
+            />
+            <StatCard
+              title="Welcome Calls Done"
+              value="85"
+              icon={CheckCircle2}
+              gradient="from-emerald-600 to-teal-800"
+              subtitle="Bonding & onboarding active"
+            />
+            <StatCard
+              title="Marked for Follow-ups"
+              value="12"
+              icon={Clock}
+              gradient="from-amber-500 to-rose-600"
+              subtitle="Scheduled callbacks & clarifications"
+            />
+          </div>
+
+          {/* Actionable Patient Queue Card */}
+          <Card className="border border-slate-200/80 bg-white/90 backdrop-blur-sm shadow-lg overflow-hidden">
+            <CardHeader className="p-6 border-b border-slate-100">
+              <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                <div>
+                  <div className="flex items-center gap-2">
+                    <PhoneCall className="h-5 w-5 text-emerald-700" />
+                    <CardTitle className="text-base font-bold text-slate-900">
+                      Newly Enrolled Patients — 2-Step Welcome Call Queue
+                    </CardTitle>
+                  </div>
+                  <CardDescription className="text-xs text-slate-500 mt-1">
+                    Step 1: Assign 5-Pillar Care Team · Step 2: Conduct Onboarding Call & Complete
+                  </CardDescription>
+                </div>
+
+                <div className="relative w-64">
+                  <Search className="absolute left-3 top-2.5 h-3.5 w-3.5 text-slate-400" />
+                  <Input
+                    placeholder="Search patient or phone..."
+                    value={search}
+                    onChange={(e) => setSearch(e.target.value)}
+                    className="pl-8 h-9 text-xs rounded-xl"
+                  />
+                </div>
+              </div>
+            </CardHeader>
+
+            <CardContent className="p-0">
+              <Table>
+                <TableHeader>
+                  <TableRow className="bg-slate-50/80 hover:bg-slate-50/80">
+                    <TableHead className="text-xs font-bold text-slate-700">Patient Details</TableHead>
+                    <TableHead className="text-xs font-bold text-slate-700">Payment & City</TableHead>
+                    <TableHead className="text-xs font-bold text-slate-700">Step 1: Care Team Status</TableHead>
+                    <TableHead className="text-xs font-bold text-slate-700">Step 2: Welcome Call</TableHead>
+                    <TableHead className="text-xs font-bold text-slate-700 text-right">Actions</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {welcomeQueue
+                    .filter((p) =>
+                      search
+                        ? p.name.toLowerCase().includes(search.toLowerCase()) || p.phone.includes(search)
+                        : true
+                    )
+                    .map((patient) => (
+                      <TableRow key={patient.id} className="hover:bg-slate-50/60">
+                        <TableCell>
+                          <p className="text-xs font-bold text-slate-900">{patient.name}</p>
+                          <p className="text-[11px] text-slate-500">{patient.phone} · ID: {patient.id}</p>
+                        </TableCell>
+                        <TableCell>
+                          <p className="text-xs font-bold text-slate-900">₹{patient.amountPaid.toLocaleString("en-IN")}</p>
+                          <p className="text-[11px] text-slate-500">{patient.city} · {patient.paymentDate}</p>
+                        </TableCell>
+                        <TableCell>
+                          {patient.careTeamAssigned ? (
+                            <Badge className="bg-emerald-100 text-emerald-800 text-[10px] font-bold">
+                              <ShieldCheck className="mr-1 h-3 w-3" />
+                              Assigned (5/5 Pillars)
+                            </Badge>
+                          ) : (
+                            <Badge variant="outline" className="border-amber-300 text-amber-800 bg-amber-50 text-[10px] font-bold">
+                              <Clock className="mr-1 h-3 w-3" />
+                              Care Team Pending
+                            </Badge>
+                          )}
+                        </TableCell>
+                        <TableCell>
+                          {patient.welcomeCallStatus === "completed" ? (
+                            <Badge className="bg-blue-100 text-blue-800 text-[10px] font-bold">
+                              <CheckCircle2 className="mr-1 h-3 w-3" />
+                              Completed ({patient.callDuration || 14}m)
+                            </Badge>
+                          ) : (
+                            <Badge variant="outline" className="border-slate-200 text-slate-700 bg-slate-50 text-[10px] font-medium">
+                              Ready to Call
+                            </Badge>
+                          )}
+                        </TableCell>
+                        <TableCell className="text-right">
+                          <div className="flex items-center justify-end gap-2">
+                            <Button
+                              size="sm"
+                              variant={patient.careTeamAssigned ? "outline" : "default"}
+                              onClick={() => {
+                                setActiveWelcomePatient(patient)
+                                setIsCareTeamModalOpen(true)
+                              }}
+                              className={`h-8 text-xs font-bold rounded-xl ${
+                                patient.careTeamAssigned
+                                  ? "border-slate-200 text-slate-700"
+                                  : "bg-[#1F56A3] hover:bg-[#192B42] text-white shadow-sm"
+                              }`}
+                            >
+                              <UserCheck className="mr-1 h-3.5 w-3.5" />
+                              {patient.careTeamAssigned ? "Edit Team" : "1. Assign Team"}
+                            </Button>
+
+                            <Button
+                              size="sm"
+                              disabled={patient.welcomeCallStatus === "completed"}
+                              onClick={() => {
+                                setActiveWelcomePatient(patient)
+                                setIsWelcomeCallModalOpen(true)
+                              }}
+                              className="h-8 text-xs font-bold rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white shadow-sm disabled:opacity-50"
+                            >
+                              <PhoneCall className="mr-1 h-3.5 w-3.5" />
+                              {patient.welcomeCallStatus === "completed" ? "Done" : "2. Welcome Call"}
+                            </Button>
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                </TableBody>
+              </Table>
+            </CardContent>
+          </Card>
+        </div>
       )}
 
-      {/* Stats Cards */}
-      <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
-        {metrics.map(({ key, label, description, icon: Icon, value, suffix }, index) => {
-          const gradients = [
-            'from-[#1F56A3] to-[#192B42]',
-            'from-[#1F56A3] to-[#FFC20E]',
-            'from-[#FFC20E] to-[#1F56A3]',
-            'from-[#BA2C2C] to-[#192B42]',
-          ]
-          const gradient = gradients[index % gradients.length]
-          
-          return showSkeleton ? (
-            <Card key={key} className="border-0 bg-gradient-to-br from-slate-50 to-slate-100 shadow-lg">
-              <CardContent className="p-6">
-                <Skeleton className="h-32 w-full" />
-              </CardContent>
-            </Card>
-          ) : (
+      {/* VIEW 2: PAYMENT RECOVERY SPECIALIST */}
+      {currentRole === "payment_recovery" && (
+        <div className="space-y-6">
+          {/* KPI Cards */}
+          <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
             <StatCard
-              key={key}
-              title={label}
-              value={`${value?.toLocaleString()}${typeof suffix === "string" ? suffix : ""}`}
-              icon={Icon}
-              gradient={gradient}
-              subtitle={description}
+              title="Overdue Receivables"
+              value="₹14.8L"
+              icon={IndianRupee}
+              gradient="from-amber-600 to-rose-700"
+              subtitle={`Pending collection (${dateFilter.label})`}
             />
-          )
-        })}
-      </div>
-
-      <SalesRecoveryOverview title="Payment Recovery" />
-
-      {/* Recent Activity */}
-      <Card className="border border-slate-200/80 bg-white/80 backdrop-blur-sm shadow-lg overflow-hidden">
-        <CardHeader className="p-6 border-b border-slate-100">
-          <div className="flex items-center gap-2">
-            <Activity className="h-4 w-4 text-slate-700" />
-            <CardTitle className="text-sm font-bold text-slate-900">Recent Call Activity</CardTitle>
+            <StatCard
+              title="Pending Program Mapping"
+              value="12 Patients"
+              icon={Layers}
+              gradient="from-[#1F56A3] to-[#192B42]"
+              subtitle="₹2,499 token paid · doctor reviewed"
+            />
+            <StatCard
+              title="Recovered This Month"
+              value="₹4.2L"
+              icon={CheckCircle2}
+              gradient="from-emerald-600 to-teal-800"
+              subtitle="Cash, UPI & Razorpay links"
+            />
+            <StatCard
+              title="Active Recovery Links"
+              value="38"
+              icon={Receipt}
+              gradient="from-purple-600 to-indigo-800"
+              subtitle="Dispatched via SMS & WhatsApp"
+            />
           </div>
-        </CardHeader>
-        <CardContent className="p-6">
-          {showSkeleton ? (
-            <div className="space-y-4">
-              {Array.from({ length: 4 }).map((_, index) => (
-                <Skeleton key={index} className="h-16 w-full" />
-              ))}
-            </div>
-          ) : recentActivity.length ? (
-            <div className="space-y-5">
-              {recentActivity.map((activity, index) => (
-                <div key={`${activity.leadName}-${index}`} className="relative flex items-start gap-3">
-                  <div className={`mt-1 w-2.5 h-2.5 rounded-full ${
-                    activity.leadStage === "connected" ? "bg-emerald-500" : 
-                    activity.outcome === "callback" ? "bg-amber-500" : "bg-blue-500"
-                  }`} />
-                  <div className="flex-1">
-                    <div className="flex items-center justify-between">
-                      <p className="text-sm font-bold text-slate-900">{activity.leadName}</p>
-                      <span className="text-xs text-slate-500 tabular-nums">{activity.timeAgo}</span>
-                    </div>
-                    <div className="flex items-center gap-2 mt-2">
-                      {/* <Badge variant="outline" className="text-xs font-semibold border-slate-300 text-slate-700 bg-slate-50 capitalize">
-                        {activity.leadStage.replace(/_/g, " ")}
-                      </Badge> */}
-                      <Badge variant="outline" className="text-xs font-semibold border-blue-300 text-blue-700 bg-blue-50 capitalize">
-                        {activity.outcome.replace(/_/g, " ")}
-                      </Badge>
-                    </div>
-                  </div>
-                </div>
-              ))}
-            </div>
-          ) : (
-            <div className="flex flex-col items-center justify-center space-y-2 rounded-xl bg-gradient-to-br from-slate-50/50 to-blue-50/30 p-8 text-center">
-              <Activity className="h-8 w-8 text-slate-400 mb-2" />
-              <p className="text-sm font-semibold text-slate-700">No recent call activity yet</p>
-              <p className="text-xs text-slate-500">Start reaching out to leads to see updates here</p>
-            </div>
-          )}
-          {recentActivity.length > 0 && (
-                        <h1></h1>
 
-            // <Button className="w-full mt-6 h-11 bg-gradient-to-r from-slate-900 to-slate-800 hover:from-slate-800 hover:to-slate-700 text-white font-semibold shadow-lg">
-            //   View All Activity
-            // </Button>
-          )}
-        </CardContent>
-      </Card>
+          {/* Recovery Patients Table */}
+          <Card className="border border-slate-200/80 bg-white/90 backdrop-blur-sm shadow-lg overflow-hidden">
+            <CardHeader className="p-6 border-b border-slate-100">
+              <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                <div>
+                  <div className="flex items-center gap-2">
+                    <IndianRupee className="h-5 w-5 text-amber-700" />
+                    <CardTitle className="text-base font-bold text-slate-900">
+                      Payment Recovery Roster & Program Assignment
+                    </CardTitle>
+                  </div>
+                  <CardDescription className="text-xs text-slate-500 mt-1">
+                    Top static rows: Coordinate Doctor Assessment recommendation, reconcile ₹2,499 token, and record payments
+                  </CardDescription>
+                </div>
+
+                <div className="relative w-64">
+                  <Search className="absolute left-3 top-2.5 h-3.5 w-3.5 text-slate-400" />
+                  <Input
+                    placeholder="Search patient or phone..."
+                    value={search}
+                    onChange={(e) => setSearch(e.target.value)}
+                    className="pl-8 h-9 text-xs rounded-xl"
+                  />
+                </div>
+              </div>
+            </CardHeader>
+
+            <CardContent className="p-0">
+              <Table>
+                <TableHeader>
+                  <TableRow className="bg-slate-50/80 hover:bg-slate-50/80">
+                    <TableHead className="text-xs font-bold text-slate-700">Patient Details</TableHead>
+                    <TableHead className="text-xs font-bold text-slate-700">Program & Clinical Status</TableHead>
+                    <TableHead className="text-xs font-bold text-slate-700">Paid So Far</TableHead>
+                    <TableHead className="text-xs font-bold text-slate-700">Pending Balance</TableHead>
+                    <TableHead className="text-xs font-bold text-slate-700">Recovery Status</TableHead>
+                    <TableHead className="text-xs font-bold text-slate-700 text-right">Actions</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {recoveryQueue
+                    .filter((p) =>
+                      search
+                        ? p.name.toLowerCase().includes(search.toLowerCase()) || p.phone.includes(search)
+                        : true
+                    )
+                    .map((item) => (
+                      <TableRow
+                        key={item.id}
+                        className={
+                          item.isEnrollmentTokenOnly
+                            ? "bg-amber-50/40 hover:bg-amber-50/70 border-l-4 border-l-amber-500"
+                            : "hover:bg-slate-50/60"
+                        }
+                      >
+                        <TableCell>
+                          <div className="flex items-center gap-2">
+                            <div>
+                              <p className="text-xs font-bold text-slate-900">{item.name}</p>
+                              <p className="text-[11px] text-slate-500">{item.phone} · {item.id}</p>
+                            </div>
+                            {item.isEnrollmentTokenOnly && (
+                              <Badge className="bg-amber-100 text-amber-800 text-[9px] font-bold">
+                                Token ₹2,499
+                              </Badge>
+                            )}
+                          </div>
+                        </TableCell>
+                        <TableCell>
+                          <p className="text-xs font-bold text-slate-800">{item.programName}</p>
+                          {item.doctorNotes && (
+                            <p className="text-[10px] text-slate-500 line-clamp-1 italic">
+                              {item.doctorName}: "{item.doctorNotes}"
+                            </p>
+                          )}
+                        </TableCell>
+                        <TableCell>
+                          <span className="text-xs font-bold text-emerald-600">
+                            ₹{item.amountPaidSoFar.toLocaleString("en-IN")}
+                          </span>
+                        </TableCell>
+                        <TableCell>
+                          <span className="text-xs font-bold text-rose-600">
+                            ₹{item.pendingBalance.toLocaleString("en-IN")}
+                          </span>
+                        </TableCell>
+                        <TableCell>
+                          {item.status === "pending_program_mapping" ? (
+                            <Badge className="bg-amber-100 text-amber-900 border-amber-300 text-[10px] font-bold">
+                              Pending Program Mapping
+                            </Badge>
+                          ) : item.status === "paid" ? (
+                            <Badge className="bg-emerald-100 text-emerald-800 text-[10px] font-bold">
+                              Fully Settled
+                            </Badge>
+                          ) : (
+                            <Badge variant="outline" className="border-rose-200 text-rose-700 bg-rose-50 text-[10px] font-bold">
+                              {item.dueDate}
+                            </Badge>
+                          )}
+                        </TableCell>
+                        <TableCell className="text-right">
+                          <div className="flex items-center justify-end gap-2">
+                            {item.status === "pending_program_mapping" ? (
+                              <Button
+                                size="sm"
+                                onClick={() => {
+                                  setActiveRecoveryPatient(item)
+                                  setIsProgramMappingModalOpen(true)
+                                }}
+                                className="h-8 text-xs font-bold rounded-xl bg-amber-600 hover:bg-amber-700 text-white shadow-sm"
+                              >
+                                <Layers className="mr-1 h-3.5 w-3.5" />
+                                Map Agreed Program
+                              </Button>
+                            ) : (
+                              <Button
+                                size="sm"
+                                onClick={() => {
+                                  setActiveRecoveryPatient(item)
+                                  setIsCollectPaymentModalOpen(true)
+                                }}
+                                className="h-8 text-xs font-bold rounded-xl bg-[#1F56A3] hover:bg-[#192B42] text-white shadow-sm"
+                              >
+                                <IndianRupee className="mr-1 h-3.5 w-3.5" />
+                                Pay Now / Invoices
+                              </Button>
+                            )}
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                </TableBody>
+              </Table>
+            </CardContent>
+          </Card>
+        </div>
+      )}
+
+      {/* VIEW 3: RESIDENTIAL CAMP BOOSTER */}
+      {currentRole === "residential_camp" && (
+        <div className="space-y-6">
+          {/* KPI Cards */}
+          <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
+            <StatCard
+              title="Eligible Camp Patients"
+              value="180"
+              icon={Sparkles}
+              gradient="from-purple-600 to-indigo-800"
+              subtitle={`>3 months tenure completed (${dateFilter.label})`}
+            />
+            <StatCard
+              title="Reminders Sent"
+              value="112"
+              icon={Layers}
+              gradient="from-blue-600 to-[#1F56A3]"
+              subtitle="WhatsApp & Mobile App cards"
+            />
+            <StatCard
+              title="Boost Calls Logged"
+              value="89"
+              icon={PhoneCall}
+              gradient="from-teal-600 to-emerald-800"
+              subtitle="Counseling & itinerary briefed"
+            />
+            <StatCard
+              title="Seats Reserved"
+              value="24"
+              icon={CheckCircle2}
+              gradient="from-purple-700 to-pink-700"
+              subtitle="₹35,000 retreat booster fee"
+            />
+          </div>
+
+          {/* Camp Boosting Patients Table */}
+          <Card className="border border-slate-200/80 bg-white/90 backdrop-blur-sm shadow-lg overflow-hidden">
+            <CardHeader className="p-6 border-b border-slate-100">
+              <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                <div>
+                  <div className="flex items-center gap-2">
+                    <Sparkles className="h-5 w-5 text-purple-700" />
+                    <CardTitle className="text-base font-bold text-slate-900">
+                      Residential Camp Boosting & Retention Queue (&gt;3 Months)
+                    </CardTitle>
+                  </div>
+                  <CardDescription className="text-xs text-slate-500 mt-1">
+                    Eligible patients in DFF Standard & VIP care with significant clinical milestones
+                  </CardDescription>
+                </div>
+
+                <div className="relative w-64">
+                  <Search className="absolute left-3 top-2.5 h-3.5 w-3.5 text-slate-400" />
+                  <Input
+                    placeholder="Search patient or phone..."
+                    value={search}
+                    onChange={(e) => setSearch(e.target.value)}
+                    className="pl-8 h-9 text-xs rounded-xl"
+                  />
+                </div>
+              </div>
+            </CardHeader>
+
+            <CardContent className="p-0">
+              <Table>
+                <TableHeader>
+                  <TableRow className="bg-slate-50/80 hover:bg-slate-50/80">
+                    <TableHead className="text-xs font-bold text-slate-700">Patient Details</TableHead>
+                    <TableHead className="text-xs font-bold text-slate-700">Protocol & Tenure</TableHead>
+                    <TableHead className="text-xs font-bold text-slate-700">Clinical Milestone</TableHead>
+                    <TableHead className="text-xs font-bold text-slate-700">Outreach Status</TableHead>
+                    <TableHead className="text-xs font-bold text-slate-700 text-right">Actions</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {campQueue
+                    .filter((p) =>
+                      search
+                        ? p.name.toLowerCase().includes(search.toLowerCase()) || p.phone.includes(search)
+                        : true
+                    )
+                    .map((item) => (
+                      <TableRow key={item.id} className="hover:bg-slate-50/60">
+                        <TableCell>
+                          <p className="text-xs font-bold text-slate-900">{item.name}</p>
+                          <p className="text-[11px] text-slate-500">{item.phone} · {item.city}</p>
+                        </TableCell>
+                        <TableCell>
+                          <p className="text-xs font-bold text-slate-800">{item.protocol}</p>
+                          <Badge className="bg-purple-100 text-purple-800 text-[10px] font-bold mt-0.5">
+                            {item.tenureDays} Days Active
+                          </Badge>
+                        </TableCell>
+                        <TableCell>
+                          <p className="text-xs font-bold text-emerald-700">{item.clinicalImprovement}</p>
+                          <p className="text-[10px] text-slate-500">Target Venue: {item.campLocation}</p>
+                        </TableCell>
+                        <TableCell>
+                          {item.status === "seat_reserved" ? (
+                            <Badge className="bg-purple-100 text-purple-900 border border-purple-300 text-[10px] font-bold">
+                              🌟 Seat Reserved (₹35K)
+                            </Badge>
+                          ) : item.status === "reminder_sent" ? (
+                            <Badge className="bg-blue-100 text-blue-800 text-[10px] font-bold">
+                              WhatsApp & App Sent
+                            </Badge>
+                          ) : item.status === "call_logged" ? (
+                            <Badge className="bg-emerald-100 text-emerald-800 text-[10px] font-bold">
+                              Call Logged
+                            </Badge>
+                          ) : (
+                            <Badge variant="outline" className="border-slate-200 text-slate-700 text-[10px] font-semibold">
+                              Eligible for Boost
+                            </Badge>
+                          )}
+                        </TableCell>
+                        <TableCell className="text-right">
+                          <div className="flex items-center justify-end gap-2">
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              onClick={() => {
+                                setActiveCampPatient(item)
+                                setIsCampReminderModalOpen(true)
+                              }}
+                              className="h-8 text-xs font-bold rounded-xl border-purple-200 text-purple-700 hover:bg-purple-50"
+                            >
+                              <Sparkles className="mr-1 h-3.5 w-3.5" />
+                              Send Reminder
+                            </Button>
+
+                            <Button
+                              size="sm"
+                              onClick={() => {
+                                setActiveCampPatient(item)
+                                setIsCampCallLogModalOpen(true)
+                              }}
+                              className="h-8 text-xs font-bold rounded-xl bg-purple-700 hover:bg-purple-800 text-white shadow-sm"
+                            >
+                              <PhoneCall className="mr-1 h-3.5 w-3.5" />
+                              Log Call
+                            </Button>
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                </TableBody>
+              </Table>
+            </CardContent>
+          </Card>
+        </div>
+      )}
+
+      {/* VIEW 4: LEAD NURTURE SPECIALIST */}
+      {currentRole === "lead_nurture" && (
+        <div className="space-y-6">
+          <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
+            <StatCard
+              title="Assigned Inbound Leads"
+              value="120"
+              icon={Users}
+              gradient="from-[#1F56A3] to-[#192B42]"
+              subtitle={`Allocated pool (${dateFilter.label})`}
+            />
+            <StatCard
+              title="Contacted Today"
+              value="34"
+              icon={PhoneCall}
+              gradient="from-emerald-600 to-teal-800"
+              subtitle="Outbound dials"
+            />
+            <StatCard
+              title="Pending Follow-ups"
+              value="18"
+              icon={Clock}
+              gradient="from-amber-500 to-[#1F56A3]"
+              subtitle="Scheduled callbacks"
+            />
+            <StatCard
+              title="Conversion Rate"
+              value="14.2%"
+              icon={TrendingUp}
+              gradient="from-[#1F56A3] to-[#FFC20E]"
+              subtitle="Webinar & Meta leads"
+            />
+          </div>
+
+          <Card className="border border-slate-200/80 bg-white/90 backdrop-blur-sm shadow-lg p-6 text-center space-y-3">
+            <div className="p-3 rounded-2xl bg-blue-50 text-[#1F56A3] w-fit mx-auto">
+              <Users className="h-6 w-6" />
+            </div>
+            <h3 className="text-base font-bold text-slate-900">Lead Nurture Pipeline Active</h3>
+            <p className="text-xs text-slate-500 max-w-md mx-auto">
+              You are viewing the Lead Nurture Specialist view. Access your full roster of fresh leads from Meta, Google Ads, and Webinars.
+            </p>
+            <div className="pt-2">
+              <Button
+                onClick={() => window.location.href = "/dashboard/telecaller/assigned-leads"}
+                className="bg-[#1F56A3] hover:bg-[#192B42] text-white font-bold rounded-xl text-xs"
+              >
+                Open Assigned Leads Table
+                <ArrowRight className="ml-1.5 h-4 w-4" />
+              </Button>
+            </div>
+          </Card>
+        </div>
+      )}
+
+      {/* MODALS */}
+      {/* 1. Care Team Assignment */}
+      {activeWelcomePatient && (
+        <CareTeamAssignmentModal
+          open={isCareTeamModalOpen}
+          onOpenChange={setIsCareTeamModalOpen}
+          patientId={activeWelcomePatient.id}
+          patientName={activeWelcomePatient.name}
+          programName={activeWelcomePatient.specialty}
+          currentCareTeam={activeWelcomePatient.careTeam}
+          onSave={handleSaveCareTeam}
+        />
+      )}
+
+      {/* 2. Welcome Call */}
+      {activeWelcomePatient && (
+        <WelcomeCallModal
+          open={isWelcomeCallModalOpen}
+          onOpenChange={setIsWelcomeCallModalOpen}
+          patientId={activeWelcomePatient.id}
+          patientName={activeWelcomePatient.name}
+          patientPhone={activeWelcomePatient.phone}
+          careTeam={activeWelcomePatient.careTeam}
+          onComplete={handleCompleteWelcomeCall}
+        />
+      )}
+
+      {/* 3. Program Mapping */}
+      {activeRecoveryPatient && (
+        <ProgramMappingModal
+          open={isProgramMappingModalOpen}
+          onOpenChange={setIsProgramMappingModalOpen}
+          patientId={activeRecoveryPatient.id}
+          patientName={activeRecoveryPatient.name}
+          doctorName={activeRecoveryPatient.doctorName}
+          doctorRecommendation={{
+            program: activeRecoveryPatient.programName,
+            fee: activeRecoveryPatient.totalPlanValue,
+            notes: activeRecoveryPatient.doctorNotes || "Doctor recommended intensive care.",
+          }}
+          enrollmentFeePaid={activeRecoveryPatient.amountPaidSoFar}
+          onConfirm={handleConfirmProgramMapping}
+        />
+      )}
+
+      {/* 4. Collect Payment */}
+      {activeRecoveryPatient && (
+        <CollectPaymentModal
+          open={isCollectPaymentModalOpen}
+          onOpenChange={setIsCollectPaymentModalOpen}
+          patientId={activeRecoveryPatient.id}
+          patientName={activeRecoveryPatient.name}
+          patientPhone={activeRecoveryPatient.phone}
+          programName={activeRecoveryPatient.programName}
+          totalPlanValue={activeRecoveryPatient.totalPlanValue}
+          amountPaidSoFar={activeRecoveryPatient.amountPaidSoFar}
+          pendingBalance={activeRecoveryPatient.pendingBalance}
+          installmentNumber={activeRecoveryPatient.installmentNumber}
+          onPaymentSuccess={handleRecordPayment}
+        />
+      )}
+
+      {/* 5. Camp Reminder */}
+      {activeCampPatient && (
+        <CampReminderModal
+          open={isCampReminderModalOpen}
+          onOpenChange={setIsCampReminderModalOpen}
+          patientId={activeCampPatient.id}
+          patientName={activeCampPatient.name}
+          patientPhone={activeCampPatient.phone}
+          tenureDays={activeCampPatient.tenureDays}
+          programName={activeCampPatient.protocol}
+          clinicalImprovement={activeCampPatient.clinicalImprovement}
+          onSend={handleSendCampReminder}
+        />
+      )}
+
+      {/* 6. Camp Call Log */}
+      {activeCampPatient && (
+        <CampCallLogModal
+          open={isCampCallLogModalOpen}
+          onOpenChange={setIsCampCallLogModalOpen}
+          patientId={activeCampPatient.id}
+          patientName={activeCampPatient.name}
+          patientPhone={activeCampPatient.phone}
+          campName={activeCampPatient.campLocation}
+          onComplete={handleCompleteCampCall}
+        />
+      )}
     </div>
   )
 }

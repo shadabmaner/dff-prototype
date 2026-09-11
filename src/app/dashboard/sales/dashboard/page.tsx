@@ -1,6 +1,7 @@
 "use client"
 
-import { useEffect } from "react"
+import { useEffect, useState } from "react"
+import { DateRangeFilter, type DateRangeFilterValue } from "@/components/shared/date-range-filter"
 import {
   LineChart,
   Line,
@@ -77,6 +78,11 @@ export default function SalesDashboardPage() {
     isError: kpiError,
     refetch: refetchKpi,
   } = useSalesDashboardKpi()
+
+  const [dateFilter, setDateFilter] = useState<DateRangeFilterValue>({
+    preset: "last_7_days",
+    label: "Last 7 Days",
+  })
 
   // Refresh data when user navigates back to this page
   useEffect(() => {
@@ -298,11 +304,15 @@ export default function SalesDashboardPage() {
       {/* Header */}
       <div className="space-y-4">
 
-        <div className="flex flex-col gap-5 md:flex-row md:items-start md:justify-between">
+        <div className="flex flex-col gap-5 md:flex-row md:items-center md:justify-between">
           <div>
             <h1 className="text-3xl md:text-4xl font-bold text-slate-900 tracking-tight">Sales Dashboard</h1>
+            <p className="text-xs text-slate-500 mt-1">Operational sales cockpit, revenue tracking, and telecaller team performance</p>
           </div>
 
+          <div className="flex items-center gap-3">
+            <DateRangeFilter value={dateFilter} onChange={setDateFilter} />
+          </div>
         </div>
       </div>
       {/* 

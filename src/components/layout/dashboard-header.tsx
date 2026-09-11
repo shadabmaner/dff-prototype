@@ -19,6 +19,7 @@ import { Input } from "@/components/ui/input"
 import { useAuth } from "@/contexts/auth-context"
 import { useLead } from "@/hooks/use-leads"
 import { useNotifications } from "@/hooks/use-notifications"
+import { TelecallerRoleHeaderBadge } from "@/components/telecaller/telecaller-role-switcher"
 
 function titleize(s: string) {
   return s
@@ -228,7 +229,12 @@ export function DashboardHeader({ onOpenNotifications }: { onOpenNotifications?:
           </div>
         )}
 
-        <div className="flex items-center gap-1.5 ml-auto">
+        <div className="flex items-center gap-2 ml-auto">
+          {/* Telecaller Specialized Role Switcher Badge */}
+          {(pathname.startsWith("/dashboard/telecaller") || userRole === "tele_caller" || userRole === "telecaller") && (
+            <TelecallerRoleHeaderBadge />
+          )}
+
           {/* Notifications */}
           <Button
             variant="ghost"
