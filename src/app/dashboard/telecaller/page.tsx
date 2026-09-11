@@ -18,8 +18,10 @@ import {
   Receipt,
   MapPin,
   AlertCircle,
+  AlertTriangle,
   TrendingUp,
 } from "lucide-react"
+import Link from "next/link"
 
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
@@ -142,6 +144,34 @@ const INITIAL_WELCOME_QUEUE: WelcomeItem[] = [
 
 const INITIAL_RECOVERY_QUEUE: RecoveryItem[] = [
   {
+    id: "HBF-2607-0024",
+    name: "Shweta Kamble",
+    phone: "+91 9876767696",
+    programName: "The Signature 90 days weight loss program",
+    totalPlanValue: 15000,
+    amountPaidSoFar: 1899,
+    pendingBalance: 13101,
+    dueDate: "38 Days Overdue",
+    overdueDays: 38,
+    status: "active_recovery",
+    installmentNumber: 2,
+    totalInstallments: 2,
+  },
+  {
+    id: "HBF-2607-0046",
+    name: "Rekha Kokani",
+    phone: "+91 98788311252",
+    programName: "The Signature 90 days weight loss program",
+    totalPlanValue: 15000,
+    amountPaidSoFar: 1899,
+    pendingBalance: 13101,
+    dueDate: "32 Days Overdue",
+    overdueDays: 32,
+    status: "active_recovery",
+    installmentNumber: 2,
+    totalInstallments: 2,
+  },
+  {
     id: "REC-201",
     name: "Vikram Malhotra",
     phone: "+91 98201 98112",
@@ -176,32 +206,32 @@ const INITIAL_RECOVERY_QUEUE: RecoveryItem[] = [
     doctorNotes: "Severe diabetic neuropathy. Doctor advised VIP continuous monitoring. Reconcile 2499 token.",
   },
   {
-    id: "REC-203",
-    name: "Rajesh Kulkarni",
-    phone: "+91 98220 11984",
-    programName: "Diabetes Free Forever (DFF)",
-    totalPlanValue: 24999,
-    amountPaidSoFar: 10000,
-    pendingBalance: 14999,
-    dueDate: "3 Days Overdue",
-    overdueDays: 3,
+    id: "HBF-2607-0043",
+    name: "Prachi Upasani",
+    phone: "+91 9768999554",
+    programName: "The Signature 90 days weight loss program",
+    totalPlanValue: 15000,
+    amountPaidSoFar: 1899,
+    pendingBalance: 13101,
+    dueDate: "32 Days Overdue",
+    overdueDays: 32,
     status: "active_recovery",
     installmentNumber: 2,
     totalInstallments: 2,
   },
   {
-    id: "REC-204",
-    name: "Smita Joshi",
-    phone: "+91 98901 88722",
-    programName: "DFF Intensive Care",
-    totalPlanValue: 49999,
-    amountPaidSoFar: 25000,
-    pendingBalance: 24999,
-    dueDate: "7 Days Overdue",
-    overdueDays: 7,
+    id: "HBF-2607-0044",
+    name: "Mitali Kale",
+    phone: "+91 97875703918",
+    programName: "The Signature 90 days weight loss program",
+    totalPlanValue: 15000,
+    amountPaidSoFar: 1899,
+    pendingBalance: 13101,
+    dueDate: "32 Days Overdue",
+    overdueDays: 32,
     status: "active_recovery",
     installmentNumber: 2,
-    totalInstallments: 3,
+    totalInstallments: 2,
   },
 ]
 
@@ -546,33 +576,72 @@ export default function TelecallerDashboardPage() {
           {/* KPI Cards */}
           <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
             <StatCard
-              title="Overdue Receivables"
-              value="₹14.8L"
+              title="Total Pending Amount"
+              value="₹3,27,525"
               icon={IndianRupee}
-              gradient="from-amber-600 to-rose-700"
-              subtitle={`Pending collection (${dateFilter.label})`}
+              gradient="from-emerald-600 to-teal-800"
+              subtitle={`Next phase dues (${dateFilter.label})`}
             />
             <StatCard
-              title="Pending Program Mapping"
-              value="12 Patients"
-              icon={Layers}
-              gradient="from-[#1F56A3] to-[#192B42]"
-              subtitle="₹2,499 token paid · doctor reviewed"
+              title="Overdue (Require Attention)"
+              value="14"
+              icon={AlertTriangle}
+              gradient="from-rose-600 to-red-800"
+              subtitle="25+ days overdue"
+            />
+            <StatCard
+              title="Due Soon"
+              value="4"
+              icon={Clock}
+              gradient="from-amber-500 to-orange-600"
+              subtitle="Within 7 days"
             />
             <StatCard
               title="Recovered This Month"
               value="₹4.2L"
               icon={CheckCircle2}
-              gradient="from-emerald-600 to-teal-800"
+              gradient="from-purple-600 to-indigo-800"
               subtitle="Cash, UPI & Razorpay links"
             />
-            <StatCard
-              title="Active Recovery Links"
-              value="38"
-              icon={Receipt}
-              gradient="from-purple-600 to-indigo-800"
-              subtitle="Dispatched via SMS & WhatsApp"
-            />
+          </div>
+
+          {/* Operational Assignment & Mapping Strip */}
+          <div className="grid gap-4 sm:grid-cols-3 bg-white p-4 rounded-2xl border border-slate-200 shadow-sm">
+            <div className="flex items-center gap-3 p-2">
+              <div className="h-10 w-10 rounded-xl bg-blue-50 text-[#2563EB] flex items-center justify-center font-bold">
+                <Users className="h-5 w-5" />
+              </div>
+              <div>
+                <p className="text-[11px] font-bold text-slate-500 uppercase tracking-wider">New Assignments for Me</p>
+                <p className="text-base font-black text-slate-900">18 Patients</p>
+                <p className="text-[10px] text-blue-600">Assigned by sales manager</p>
+              </div>
+            </div>
+
+            <div className="flex items-center gap-3 p-2 border-l border-slate-100">
+              <div className="h-10 w-10 rounded-xl bg-amber-50 text-amber-600 flex items-center justify-center font-bold">
+                <Layers className="h-5 w-5" />
+              </div>
+              <div>
+                <p className="text-[11px] font-bold text-slate-500 uppercase tracking-wider">Pending Program Mapping</p>
+                <p className="text-base font-black text-slate-900">12 Patients</p>
+                <p className="text-[10px] text-amber-600">₹2,499 token paid · doctor reviewed</p>
+              </div>
+            </div>
+
+            <div className="flex items-center gap-3 p-2 border-l border-slate-100">
+              <div className="h-10 w-10 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center font-bold">
+                <Receipt className="h-5 w-5" />
+              </div>
+              <div>
+                <p className="text-[11px] font-bold text-slate-500 uppercase tracking-wider">Collection Quick Link</p>
+                <Link href="/dashboard/telecaller/payment-recovery">
+                  <Button size="sm" variant="outline" className="h-7 text-xs font-bold mt-1 text-[#2563EB] border-blue-200 hover:bg-blue-50">
+                    Open Recovery Roster →
+                  </Button>
+                </Link>
+              </div>
+            </div>
           </div>
 
           {/* Recovery Patients Table */}

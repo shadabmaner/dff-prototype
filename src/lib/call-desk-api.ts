@@ -101,6 +101,9 @@ export interface ApiCallLog {
     duration_seconds?: number;
     notes?: string;
     outcome?: string;
+    call_reason?: string;
+    call_sequence?: "first_call" | "follow_up";
+    attempt_number?: number;
     lead_stage_at_call?: string;
     follow_up_date?: string;
     called_at: string;

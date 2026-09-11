@@ -92,15 +92,19 @@ interface EnhancedCallLogsTableProps {
   onStatsChange?: (stats: CallLogStats) => void
   /** Summary data from API */
   summaryData?: CallLogSummary
+  /** Telecaller name for user-scoped filtering (e.g. "Sneha Nair") */
+  scopedCallerName?: string
+  /** Whether to default to "My Calls Only" */
+  defaultMyCallsOnly?: boolean
 }
 
 // ─── Column definitions ───────────────────────────────────────────────────────
 const buildColumns = (): ColumnDef<ApiCallLog>[] => [
   {
     accessorKey: "called_at",
-    header: "Date",
+    header: "Date & Time",
     cell: ({ row }) => (
-      <div className="flex flex-col gap-0.5">
+      <div className="flex flex-col gap-0.5 whitespace-nowrap">
         <div className="font-semibold text-[13px] text-foreground">
           {formatDate(row.original.called_at, "MMM dd, yyyy")}
         </div>
@@ -112,22 +116,56 @@ const buildColumns = (): ColumnDef<ApiCallLog>[] => [
   },
   {
     accessorKey: "lead_name",
-    header: "Lead",
+    header: "Lead / Patient",
     cell: ({ row }) => (
-      <div className="flex items-center gap-2">
-        <div className="w-6 h-6 bg-blue-100 dark:bg-blue-500/10 rounded-full flex items-center justify-center ring-1 ring-blue-500/20">
-          <User className="h-3 w-3 text-blue-600 dark:text-blue-400" />
+      <div className="flex items-center gap-2.5 min-w-[170px]">
+        <div className="w-7 h-7 bg-blue-100 dark:bg-blue-500/10 rounded-full flex items-center justify-center ring-1 ring-blue-500/20 shrink-0">
+          <User className="h-3.5 w-3.5 text-blue-600 dark:text-blue-400" />
         </div>
         <div className="flex flex-col gap-0.5">
           <div className="font-bold text-[13px] text-foreground tracking-tight leading-none mb-0.5">
             {row.original.lead_name || "Unknown Lead"}
           </div>
-          <div className="text-[10px] text-muted-foreground font-mono tracking-tighter uppercase">
-            {row.original.phone}
+          <div className="flex items-center gap-1.5 text-[10px] text-muted-foreground font-mono">
+            <span>{row.original.phone}</span>
+            {row.original.lead_id && (
+              <span className="bg-slate-100 text-slate-600 px-1 py-0.2 rounded font-sans font-semibold">
+                {row.original.lead_id}
+              </span>
+            )}
           </div>
         </div>
       </div>
     ),
+  },
+  {
+    accessorKey: "call_reason",
+    header: "Call Reason / Purpose",
+    cell: ({ row }) => {
+      const reason = row.original.call_reason || "General Follow-up"
+      return (
+        <span className="inline-flex items-center px-2.5 py-1 rounded-md text-[11px] font-semibold bg-slate-100 text-slate-700 border border-slate-200/80 whitespace-nowrap">
+          {reason}
+        </span>
+      )
+    },
+  },
+  {
+    accessorKey: "call_sequence",
+    header: "Call Sequence",
+    cell: ({ row }) => {
+      const isFirst = row.original.call_sequence === "first_call" || row.original.attempt_number === 1
+      const attempt = row.original.attempt_number || (isFirst ? 1 : 2)
+      return isFirst ? (
+        <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold bg-sky-50 text-sky-700 border border-sky-200 uppercase tracking-wider whitespace-nowrap">
+          First Call
+        </span>
+      ) : (
+        <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold bg-purple-50 text-purple-700 border border-purple-200 uppercase tracking-wider whitespace-nowrap">
+          Follow-up #{attempt}
+        </span>
+      )
+    },
   },
   {
     accessorKey: "duration_seconds",
@@ -155,7 +193,7 @@ const buildColumns = (): ColumnDef<ApiCallLog>[] => [
         <Badge
           variant="outline"
           className={cn(
-            "text-[10px] font-bold uppercase tracking-wider px-2 py-0 h-5 border-none ring-1 ring-inset",
+            "text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 h-5 border-none ring-1 ring-inset whitespace-nowrap",
             config.color
           )}
         >
@@ -169,22 +207,22 @@ const buildColumns = (): ColumnDef<ApiCallLog>[] => [
     accessorKey: "notes",
     header: "Notes",
     cell: ({ row }) => (
-      <div className="max-w-[260px]">
+      <div className="max-w-[280px]">
         <p className="text-[12px] text-muted-foreground leading-relaxed line-clamp-2">
-          {row.original.notes || <span className="italic opacity-40">No notes</span>}
+          {row.original.notes || <span className="italic opacity-40">No notes recorded</span>}
         </p>
       </div>
     ),
   },
   {
     accessorKey: "follow_up_date",
-    header: "Callback",
+    header: "Next Action / Callback",
     cell: ({ row }) => {
       const d = row.original.follow_up_date
-      if (!d) return <div className="text-[12px] text-muted-foreground/30 font-medium italic">None</div>
+      if (!d) return <div className="text-[12px] text-muted-foreground/30 font-medium italic">None scheduled</div>
       const isPast = new Date(d) < new Date()
       return (
-        <div className="flex flex-col gap-0.5">
+        <div className="flex flex-col gap-0.5 whitespace-nowrap">
           <div className={cn("font-bold text-[12px]", isPast ? "text-red-500" : "text-primary")}>
             {formatDate(d, "MMM dd, yyyy")}
             {isPast && <span className="ml-1 text-[9px] bg-red-100 text-red-600 px-1.5 py-0.5 rounded uppercase font-bold tracking-wider">Overdue</span>}
@@ -200,8 +238,8 @@ const buildColumns = (): ColumnDef<ApiCallLog>[] => [
     accessorKey: "assignee_name",
     header: "Called By",
     cell: ({ row }) => (
-      <div className="flex items-center gap-2">
-        <div className="w-5 h-5 bg-muted rounded-full flex items-center justify-center ring-1 ring-border/50">
+      <div className="flex items-center gap-2 whitespace-nowrap">
+        <div className="w-5 h-5 bg-muted rounded-full flex items-center justify-center ring-1 ring-border/50 shrink-0">
           <User className="h-2.5 w-2.5 text-muted-foreground" />
         </div>
         <span className="text-[12px] font-bold text-foreground tracking-tight">
@@ -210,183 +248,310 @@ const buildColumns = (): ColumnDef<ApiCallLog>[] => [
       </div>
     ),
   },
-  {
-    id: "attempt_count",
-    header: "Calls Attempted",
-    cell: ({ row }) => {
-      // Calculate attempt count from the data or use a default
-      const count = 1 // Default to 1 for now, can be calculated from data later
-      return (
-        <div className="flex items-center gap-1.5">
-          <div className="w-6 h-6 bg-blue-50 rounded-full flex items-center justify-center ring-1 ring-blue-200">
-            <Phone className="h-3 w-3 text-blue-600" />
-          </div>
-          <span className="text-[12px] font-bold text-foreground tabular-nums">{count}</span>
-        </div>
-      )
-    },
-  },
-  // {
-  //   id: "actions",
-  //   header: "Actions",
-  //   cell: ({ row }) => (
-  //     <Button variant="ghost" size="sm">
-  //       <MoreHorizontal className="h-4 w-4" />
-  //     </Button>
-  //   ),
-  // },
 ]
 
+const now = Date.now()
+const oneHour = 60 * 60 * 1000
+const oneDay = 24 * 60 * 60 * 1000
+
 const FALLBACK_CALL_LOGS: ApiCallLog[] = [
+  // ── Sneha Nair (Payment Recovery) ──
+  {
+    id: "cl-rec-001",
+    lead_id: "HBF-2607-0024",
+    lead_name: "Shweta Kamble",
+    phone: "+91 98201 12345",
+    telecaller_id: "TC-R202",
+    caller_name: "Sneha Nair (Payment Recovery)",
+    direction: "outbound",
+    status: "completed",
+    duration_seconds: 450,
+    outcome: "follow_up_required",
+    call_reason: "Phase 2 Recovery Due",
+    call_sequence: "follow_up",
+    attempt_number: 3,
+    notes: "Patient confirmed UPI payment of ₹13,101 will be completed by 5:30 PM today after salary credit.",
+    follow_up_date: new Date(now + 6 * oneHour).toISOString(),
+    called_at: new Date(now - 1.5 * oneHour).toISOString(),
+    created_at: new Date(now - 1.5 * oneHour).toISOString(),
+  },
+  {
+    id: "cl-rec-002",
+    lead_id: "HBF-2607-0025",
+    lead_name: "Rekha Kokani",
+    phone: "+91 98192 34567",
+    telecaller_id: "TC-R202",
+    caller_name: "Sneha Nair (Payment Recovery)",
+    direction: "outbound",
+    status: "completed",
+    duration_seconds: 180,
+    outcome: "call_back_requested",
+    call_reason: "Phase 2 Recovery Due",
+    call_sequence: "first_call",
+    attempt_number: 1,
+    notes: "Overdue collection call. Patient was driving in traffic, requested callback at 6:30 PM today.",
+    follow_up_date: new Date(now + 5 * oneHour).toISOString(),
+    called_at: new Date(now - 3 * oneHour).toISOString(),
+    created_at: new Date(now - 3 * oneHour).toISOString(),
+  },
+  {
+    id: "cl-rec-003",
+    lead_id: "HBF-2607-0026",
+    lead_name: "Prachi Upasani",
+    phone: "+91 98330 45678",
+    telecaller_id: "TC-R202",
+    caller_name: "Sneha Nair (Payment Recovery)",
+    direction: "outbound",
+    status: "completed",
+    duration_seconds: 520,
+    outcome: "connected",
+    call_reason: "PTP Follow-up",
+    call_sequence: "follow_up",
+    attempt_number: 2,
+    notes: "Clarified 2-phase fee breakdown. Sent direct Razorpay payment link for ₹13,101 on WhatsApp.",
+    called_at: new Date(now - 22 * oneHour).toISOString(), // Yesterday
+    created_at: new Date(now - 22 * oneHour).toISOString(),
+  },
+  {
+    id: "cl-rec-004",
+    lead_id: "HBF-2607-0027",
+    lead_name: "Mitali Kale",
+    phone: "+91 98205 56789",
+    telecaller_id: "TC-R202",
+    caller_name: "Sneha Nair (Payment Recovery)",
+    direction: "outbound",
+    status: "completed",
+    duration_seconds: 780,
+    outcome: "converted",
+    call_reason: "Pending Program Mapping",
+    call_sequence: "first_call",
+    attempt_number: 1,
+    notes: "Patient had paid ₹2,499 token. Enrolled into 90 Days Signature Program. Full balance ₹13,101 paid via UPI.",
+    called_at: new Date(now - 26 * oneHour).toISOString(), // Yesterday
+    created_at: new Date(now - 26 * oneHour).toISOString(),
+  },
+  {
+    id: "cl-rec-005",
+    lead_id: "HBF-2607-0028",
+    lead_name: "Bharati Naik",
+    phone: "+91 98190 67890",
+    telecaller_id: "TC-R202",
+    caller_name: "Sneha Nair (Payment Recovery)",
+    direction: "outbound",
+    status: "completed",
+    duration_seconds: 360,
+    outcome: "follow_up_required",
+    call_reason: "Phase 2 Overdue",
+    call_sequence: "follow_up",
+    attempt_number: 4,
+    notes: "Spoke to spouse. Requested extension till 15th due to outstation emergency. Follow-up scheduled.",
+    follow_up_date: new Date(now + 4 * oneDay).toISOString(),
+    called_at: new Date(now - 2 * oneDay).toISOString(),
+    created_at: new Date(now - 2 * oneDay).toISOString(),
+  },
+  {
+    id: "cl-rec-006",
+    lead_id: "HBF-2607-0029",
+    lead_name: "Shashikant Chavan",
+    phone: "+91 98208 78901",
+    telecaller_id: "TC-R202",
+    caller_name: "Sneha Nair (Payment Recovery)",
+    direction: "outbound",
+    status: "completed",
+    duration_seconds: 0,
+    outcome: "not_connected",
+    call_reason: "Overdue Installment",
+    call_sequence: "first_call",
+    attempt_number: 1,
+    notes: "No response after 6 rings. Automated payment reminder SMS and WhatsApp template dispatched.",
+    called_at: new Date(now - 3 * oneDay).toISOString(),
+    created_at: new Date(now - 3 * oneDay).toISOString(),
+  },
+  {
+    id: "cl-rec-007",
+    lead_id: "HBF-2607-0030",
+    lead_name: "Sneha Deshpande",
+    phone: "+91 98335 89012",
+    telecaller_id: "TC-R202",
+    caller_name: "Sneha Nair (Payment Recovery)",
+    direction: "outbound",
+    status: "completed",
+    duration_seconds: 640,
+    outcome: "connected",
+    call_reason: "NEFT Verification",
+    call_sequence: "follow_up",
+    attempt_number: 2,
+    notes: "Patient submitted NEFT bank counterfoil for ₹13,101. Verified and attached to finance portal.",
+    called_at: new Date(now - 5 * oneDay).toISOString(),
+    created_at: new Date(now - 5 * oneDay).toISOString(),
+  },
+  {
+    id: "cl-rec-008",
+    lead_id: "REC-201",
+    lead_name: "Vikram Malhotra",
+    phone: "+91 98201 22334",
+    telecaller_id: "TC-R202",
+    caller_name: "Sneha Nair (Payment Recovery)",
+    direction: "outbound",
+    status: "completed",
+    duration_seconds: 480,
+    outcome: "converted",
+    call_reason: "Token Balance Collection",
+    call_sequence: "first_call",
+    attempt_number: 1,
+    notes: "Program mapping agreed. Deducted ₹2,499 token; mapped 1-Year DFF Intensive. Razorpay link sent.",
+    called_at: new Date(now - 6 * oneDay).toISOString(),
+    created_at: new Date(now - 6 * oneDay).toISOString(),
+  },
+  {
+    id: "cl-rec-009",
+    lead_id: "REC-202",
+    lead_name: "Deepika Rao",
+    phone: "+91 98450 99881",
+    telecaller_id: "TC-R202",
+    caller_name: "Sneha Nair (Payment Recovery)",
+    direction: "outbound",
+    status: "completed",
+    duration_seconds: 300,
+    outcome: "follow_up_required",
+    call_reason: "Installment #2 Due",
+    call_sequence: "follow_up",
+    attempt_number: 3,
+    notes: "Installment #2 due. Patient requested call after 4 PM to pay via UPI.",
+    called_at: new Date(now - 8 * oneDay).toISOString(),
+    created_at: new Date(now - 8 * oneDay).toISOString(),
+  },
+
+  // ── Ananya Iyer (Welcome Specialist) ──
   {
     id: "cl-101",
     lead_id: "1a2b3c4d",
     lead_name: "Rajesh Kumar",
     phone: "+91 98765 43210",
-    telecaller_id: "tel-1",
+    telecaller_id: "TC-W101",
     caller_name: "Ananya Iyer (Welcome Specialist)",
     direction: "outbound",
     status: "completed",
     duration_seconds: 840,
     outcome: "connected",
+    call_reason: "Welcome Onboarding",
+    call_sequence: "first_call",
+    attempt_number: 1,
     notes: "Welcome call completed. Welcomed patient to DFF protocol and scheduled Dr. Bhagyesh assessment.",
-    called_at: new Date(Date.now() - 1000 * 60 * 35).toISOString(),
-    created_at: new Date(Date.now() - 1000 * 60 * 35).toISOString(),
+    called_at: new Date(now - 2 * oneHour).toISOString(),
+    created_at: new Date(now - 2 * oneHour).toISOString(),
   },
   {
     id: "cl-102",
     lead_id: "4d5e6f7g",
     lead_name: "Sneha Patel",
     phone: "+91 98765 43213",
-    telecaller_id: "tel-1",
+    telecaller_id: "TC-W101",
     caller_name: "Ananya Iyer (Welcome Specialist)",
     direction: "outbound",
     status: "completed",
     duration_seconds: 960,
     outcome: "connected",
+    call_reason: "Care Team Mapping",
+    call_sequence: "follow_up",
+    attempt_number: 2,
     notes: "Welcome onboarding call done. Confirmed 5-pillar care team mapping and kit dispatch.",
-    called_at: new Date(Date.now() - 1000 * 60 * 120).toISOString(),
-    created_at: new Date(Date.now() - 1000 * 60 * 120).toISOString(),
-  },
-  {
-    id: "cl-103",
-    lead_id: "REC-201",
-    lead_name: "Vikram Malhotra",
-    phone: "+91 98201 22334",
-    telecaller_id: "tel-2",
-    caller_name: "Sneha Nair (Payment Recovery)",
-    direction: "outbound",
-    status: "completed",
-    duration_seconds: 480,
-    outcome: "converted",
-    notes: "Program mapping agreed. Deducted ₹2,499 token; mapped 1-Year DFF Intensive. Razorpay link sent.",
-    called_at: new Date(Date.now() - 1000 * 60 * 240).toISOString(),
-    created_at: new Date(Date.now() - 1000 * 60 * 240).toISOString(),
-  },
-  {
-    id: "cl-104",
-    lead_id: "REC-202",
-    lead_name: "Deepika Rao",
-    phone: "+91 98450 99881",
-    telecaller_id: "tel-2",
-    caller_name: "Sneha Nair (Payment Recovery)",
-    direction: "outbound",
-    status: "completed",
-    duration_seconds: 300,
-    outcome: "follow_up_required",
-    notes: "Installment #2 due. Patient requested call after 4 PM to pay via UPI.",
-    called_at: new Date(Date.now() - 1000 * 60 * 360).toISOString(),
-    created_at: new Date(Date.now() - 1000 * 60 * 360).toISOString(),
-  },
-  {
-    id: "cl-105",
-    lead_id: "CAMP-301",
-    lead_name: "Sunita Deshmukh",
-    phone: "+91 98201 44512",
-    telecaller_id: "tel-3",
-    caller_name: "Divya Rao (Camp Booster)",
-    direction: "outbound",
-    status: "completed",
-    duration_seconds: 720,
-    outcome: "converted",
-    notes: "Residential retreat booster briefing. Confirmed Lonavala seat with ₹35,000 reservation payment.",
-    called_at: new Date(Date.now() - 1000 * 60 * 500).toISOString(),
-    created_at: new Date(Date.now() - 1000 * 60 * 500).toISOString(),
+    called_at: new Date(now - 5 * oneHour).toISOString(),
+    created_at: new Date(now - 5 * oneHour).toISOString(),
   },
   {
     id: "cl-106",
     lead_id: "2b3c4d5e",
     lead_name: "Priya Sharma",
     phone: "+91 98765 43211",
-    telecaller_id: "tel-1",
+    telecaller_id: "TC-W101",
     caller_name: "Ananya Iyer (Welcome Specialist)",
     direction: "outbound",
     status: "completed",
     duration_seconds: 510,
     outcome: "connected",
+    call_reason: "Dietitian Introduction",
+    call_sequence: "follow_up",
+    attempt_number: 2,
     notes: "Follow-up on care team readiness. Introduced Dietitian Anjali Patel.",
-    called_at: new Date(Date.now() - 1000 * 60 * 750).toISOString(),
-    created_at: new Date(Date.now() - 1000 * 60 * 750).toISOString(),
-  },
-  {
-    id: "cl-107",
-    lead_id: "lead-101",
-    lead_name: "Aarav Mehta",
-    phone: "+91 98201 11223",
-    telecaller_id: "tel-4",
-    caller_name: "Rahul Sharma (Lead Nurture)",
-    direction: "outbound",
-    status: "completed",
-    duration_seconds: 420,
-    outcome: "interested",
-    notes: "Inbound Meta lead. Inquired about reversing HbA1c 8.4%. Scheduled webinar registration.",
-    called_at: new Date(Date.now() - 1000 * 60 * 950).toISOString(),
-    created_at: new Date(Date.now() - 1000 * 60 * 950).toISOString(),
+    called_at: new Date(now - 1 * oneDay).toISOString(),
+    created_at: new Date(now - 1 * oneDay).toISOString(),
   },
   {
     id: "cl-108",
     lead_id: "6f7g8h9i",
     lead_name: "Neha Joshi",
     phone: "+91 98765 43215",
-    telecaller_id: "tel-1",
+    telecaller_id: "TC-W101",
     caller_name: "Ananya Iyer (Welcome Specialist)",
     direction: "outbound",
     status: "completed",
     duration_seconds: 180,
     outcome: "call_back_requested",
+    call_reason: "Welcome Setup",
+    call_sequence: "first_call",
+    attempt_number: 1,
     notes: "Busy in a meeting. Requested callback tomorrow morning at 11:00 AM.",
-    called_at: new Date(Date.now() - 1000 * 60 * 1200).toISOString(),
-    created_at: new Date(Date.now() - 1000 * 60 * 1200).toISOString(),
+    called_at: new Date(now - 2 * oneDay).toISOString(),
+    created_at: new Date(now - 2 * oneDay).toISOString(),
+  },
+
+  // ── Divya Rao (Camp Booster) ──
+  {
+    id: "cl-105",
+    lead_id: "CAMP-301",
+    lead_name: "Sunita Deshmukh",
+    phone: "+91 98201 44512",
+    telecaller_id: "TC-C303",
+    caller_name: "Divya Rao (Camp Booster)",
+    direction: "outbound",
+    status: "completed",
+    duration_seconds: 720,
+    outcome: "converted",
+    call_reason: "Residential Retreat Pitch",
+    call_sequence: "follow_up",
+    attempt_number: 2,
+    notes: "Residential retreat booster briefing. Confirmed Lonavala seat with ₹35,000 reservation payment.",
+    called_at: new Date(now - 3 * oneDay).toISOString(),
+    created_at: new Date(now - 3 * oneDay).toISOString(),
   },
   {
     id: "cl-109",
     lead_id: "CAMP-302",
     lead_name: "Girish Bapat",
     phone: "+91 98901 23411",
-    telecaller_id: "tel-3",
+    telecaller_id: "TC-C303",
     caller_name: "Divya Rao (Camp Booster)",
     direction: "outbound",
     status: "completed",
     duration_seconds: 660,
     outcome: "follow_up_required",
+    call_reason: "Retreat Brochure Follow-up",
+    call_sequence: "first_call",
+    attempt_number: 1,
     notes: "Camp brochure & venue link shared via WhatsApp. Will discuss with spouse.",
-    called_at: new Date(Date.now() - 1000 * 60 * 1400).toISOString(),
-    created_at: new Date(Date.now() - 1000 * 60 * 1400).toISOString(),
+    called_at: new Date(now - 4 * oneDay).toISOString(),
+    created_at: new Date(now - 4 * oneDay).toISOString(),
   },
+
+  // ── Rahul Sharma (Lead Nurture) ──
   {
-    id: "cl-110",
-    lead_id: "7g8h9i0j",
-    lead_name: "Suresh Nair",
-    phone: "+91 98765 43216",
-    telecaller_id: "tel-1",
-    caller_name: "Ananya Iyer (Welcome Specialist)",
+    id: "cl-107",
+    lead_id: "lead-101",
+    lead_name: "Aarav Mehta",
+    phone: "+91 98201 11223",
+    telecaller_id: "TC-L404",
+    caller_name: "Rahul Sharma (Lead Nurture)",
     direction: "outbound",
     status: "completed",
-    duration_seconds: 900,
-    outcome: "connected",
-    notes: "Full welcome call and 5-pillar team alignment successfully completed.",
-    called_at: new Date(Date.now() - 1000 * 60 * 1600).toISOString(),
-    created_at: new Date(Date.now() - 1000 * 60 * 1600).toISOString(),
+    duration_seconds: 420,
+    outcome: "interested",
+    call_reason: "Webinar Lead Qualification",
+    call_sequence: "first_call",
+    attempt_number: 1,
+    notes: "Inbound Meta lead. Inquired about reversing HbA1c 8.4%. Scheduled webinar registration.",
+    called_at: new Date(now - 1.5 * oneHour).toISOString(),
+    created_at: new Date(now - 1.5 * oneHour).toISOString(),
   },
 ]
 
@@ -399,6 +564,8 @@ export function EnhancedCallLogsTable({
   className,
   onStatsChange,
   summaryData,
+  scopedCallerName,
+  defaultMyCallsOnly = true,
 }: EnhancedCallLogsTableProps) {
   const [apiData, setApiData] = React.useState<ApiCallLog[]>([])
   const [apiSummary, setApiSummary] = React.useState<CallLogSummary | null>(null)
@@ -406,6 +573,9 @@ export function EnhancedCallLogsTable({
   const [totalLogs, setTotalLogs] = React.useState(0)
   const [error, setError] = React.useState<string | null>(null)
 
+  const [scopeFilter, setScopeFilter] = React.useState<"my_calls" | "all">(
+    defaultMyCallsOnly && scopedCallerName ? "my_calls" : "all"
+  )
   const [searchTerm, setSearchTerm] = React.useState("")
   const [outcomeFilter, setOutcomeFilter] = React.useState<string>("all")
   const [telecallerFilter, setTelecallerFilter] = React.useState<string>("all")
@@ -420,6 +590,7 @@ export function EnhancedCallLogsTable({
   const handleDateRangeSelect = (range: { from?: Date; to?: Date } | undefined) => {
     if (range?.from && range?.to) {
       setDateRange({ from: range.from, to: range.to })
+      setClientPagination((prev) => ({ ...prev, pageIndex: 0 }))
     } else {
       setDateRange(undefined)
     }
@@ -529,127 +700,112 @@ export function EnhancedCallLogsTable({
     if (!isStaticMode) loadTelecallers()
   }, [loadCallLogs, isStaticMode, loadTelecallers, refreshKey])
 
-  React.useEffect(() => {
-    if (onStatsChange && displayData.length > 0) {
-      const total = displayData.length
-      const connected = displayData.filter((d) => d.outcome === "connected" || d.outcome === "converted" || d.outcome === "interested").length
-      const notAnswered = displayData.filter((d) => d.outcome === "not_connected" || d.outcome === "busy" || d.outcome === "no_response").length
-      const callbacks = displayData.filter((d) => d.outcome === "call_back_requested" || d.outcome === "call_back_later").length
-      const overdueFollowUps = displayData.filter((d) => d.outcome === "follow_up_required").length
-      const connectionRate = total > 0 ? (connected / total) * 100 : 0
-      onStatsChange({
-        total,
-        connected,
-        notAnswered,
-        callbacks,
-        overdueFollowUps,
-        connectionRate,
-      })
-    }
-  }, [displayData, onStatsChange])
-
-  // Client-side filter for static data
+  // Client-side multi-layer filter (Search, Scope, Outcome, Date)
   const filteredData = React.useMemo(() => {
-    if (!isStaticMode) return displayData
     return displayData.filter((call) => {
-      const matchesSearch =
-        trimmedSearchTerm === "" ||
-        (call.lead_name ?? "").toLowerCase().includes(trimmedSearchTerm.toLowerCase()) ||
-        (call.notes ?? "").toLowerCase().includes(trimmedSearchTerm.toLowerCase()) ||
-        (call.lead_id ?? "").toLowerCase().includes(trimmedSearchTerm.toLowerCase())
-      const matchesOutcome = outcomeFilter === "all" || call.outcome === outcomeFilter
-      
-      // Date filtering logic
-      const callDate = new Date(call.created_at)
-      const today = new Date()
-      today.setHours(0, 0, 0, 0)
-      
-      let matchesDate = true
+      // 1. Scope filter: My Calls Only vs All Desk Calls
+      if (scopeFilter === "my_calls" && scopedCallerName) {
+        const caller = (call.caller_name || call.telecaller_email || "").toLowerCase()
+        const needle = scopedCallerName.toLowerCase()
+        if (!caller.includes(needle)) {
+          return false
+        }
+      }
+
+      // 2. Search filter
+      if (trimmedSearchTerm) {
+        const query = trimmedSearchTerm.toLowerCase()
+        const matchesSearch =
+          (call.lead_name ?? "").toLowerCase().includes(query) ||
+          (call.notes ?? "").toLowerCase().includes(query) ||
+          (call.lead_id ?? "").toLowerCase().includes(query) ||
+          (call.phone ?? "").toLowerCase().includes(query) ||
+          (call.call_reason ?? "").toLowerCase().includes(query) ||
+          (call.caller_name ?? "").toLowerCase().includes(query)
+        if (!matchesSearch) return false
+      }
+
+      // 3. Outcome filter
+      if (outcomeFilter !== "all" && call.outcome !== outcomeFilter) {
+        return false
+      }
+
+      // 4. Date filtering logic
+      const callDate = new Date(call.called_at || call.created_at)
+      const now = new Date()
+      const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 0, 0, 0, 0)
+      const todayEnd = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59, 999)
+
       if (dateFilter === "today") {
-        const todayStart = new Date(today)
-        const todayEnd = new Date(today)
-        todayEnd.setHours(23, 59, 59, 999)
-        matchesDate = callDate >= todayStart && callDate <= todayEnd
+        if (callDate < todayStart || callDate > todayEnd) return false
+      } else if (dateFilter === "yesterday") {
+        const yestStart = new Date(todayStart)
+        yestStart.setDate(yestStart.getDate() - 1)
+        const yestEnd = new Date(todayEnd)
+        yestEnd.setDate(yestEnd.getDate() - 1)
+        if (callDate < yestStart || callDate > yestEnd) return false
       } else if (dateFilter === "last7days") {
-        const sevenDaysAgo = new Date(today)
+        const sevenDaysAgo = new Date(todayStart)
         sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7)
-        matchesDate = callDate >= sevenDaysAgo
+        if (callDate < sevenDaysAgo) return false
       } else if (dateFilter === "last1month") {
-        const oneMonthAgo = new Date(today)
+        const oneMonthAgo = new Date(todayStart)
         oneMonthAgo.setMonth(oneMonthAgo.getMonth() - 1)
-        matchesDate = callDate >= oneMonthAgo
+        if (callDate < oneMonthAgo) return false
       } else if (dateFilter === "custom" && dateRange?.from && dateRange?.to) {
         const fromDate = new Date(dateRange.from)
         fromDate.setHours(0, 0, 0, 0)
         const toDate = new Date(dateRange.to)
         toDate.setHours(23, 59, 59, 999)
-        matchesDate = callDate >= fromDate && callDate <= toDate
+        if (callDate < fromDate || callDate > toDate) return false
       }
-      
-      return matchesSearch && matchesOutcome && matchesDate
+
+      return true
     })
-  }, [isStaticMode, displayData, trimmedSearchTerm, outcomeFilter, dateFilter, dateRange])
+  }, [displayData, scopeFilter, scopedCallerName, trimmedSearchTerm, outcomeFilter, dateFilter, dateRange])
 
   const columns = React.useMemo(() => buildColumns(), [])
-
-  const derivedTotalPages = React.useMemo(() => {
-    if (isStaticMode) return Math.max(1, Math.ceil(filteredData.length / clientPagination.pageSize))
-    if (paginationMeta?.totalPages) return paginationMeta.totalPages
-    return Math.max(1, Math.ceil((totalLogs || 0) / pageSize))
-  }, [filteredData.length, isStaticMode, clientPagination.pageSize, paginationMeta, totalLogs, pageSize])
 
   const table = useReactTable({
     data: filteredData,
     columns,
     getCoreRowModel: getCoreRowModel(),
-    ...(isStaticMode ? { getPaginationRowModel: getPaginationRowModel() } : {}),
-    manualPagination: !isStaticMode,
-    pageCount: isStaticMode ? undefined : derivedTotalPages,
-    state: isStaticMode ? { pagination: clientPagination } : undefined,
-    onPaginationChange: isStaticMode ? setClientPagination : undefined,
+    getPaginationRowModel: getPaginationRowModel(),
+    state: { pagination: clientPagination },
+    onPaginationChange: setClientPagination,
   })
 
   const paginationSummary = React.useMemo(() => {
-    if (isStaticMode) {
-      const start = filteredData.length === 0 ? 0 : (clientPagination.pageIndex * clientPagination.pageSize) + 1
-      const end = filteredData.length === 0 ? 0 : Math.min(filteredData.length, start + table.getRowModel().rows.length - 1)
-      return { start, end, total: filteredData.length }
-    }
-    const total = totalLogs
+    const total = filteredData.length
     if (total === 0) return { start: 0, end: 0, total: 0 }
-    const start = (currentPage - 1) * pageSize + 1
-    const end = Math.min(total, start + apiData.length - 1)
+    const start = clientPagination.pageIndex * clientPagination.pageSize + 1
+    const end = Math.min(total, (clientPagination.pageIndex + 1) * clientPagination.pageSize)
     return { start, end, total }
-  }, [apiData.length, currentPage, filteredData.length, isStaticMode, pageSize, table, totalLogs])
+  }, [filteredData.length, clientPagination.pageIndex, clientPagination.pageSize])
 
-  // Statistics
+  // Statistics dynamically computed from current filtered scope
   const stats = React.useMemo<CallLogStats>(() => {
-    // Use API summary data if available, otherwise fall back to client-side calculation
-    if (apiSummary && !isStaticMode) {
-      const connectionRate = apiSummary.totalCalls > 0 ? (apiSummary.connected / apiSummary.totalCalls) * 100 : 0
-      return {
-        total: apiSummary.totalCalls,
-        connected: apiSummary.connected,
-        notAnswered: apiSummary.notConnected,
-        callbacks: apiSummary.followUps,
-        overdueFollowUps: apiSummary.overdueFollowUps,
-        connectionRate
-      }
-    }
-
-    // Fallback to client-side calculation
-    const all = isStaticMode ? filteredData : apiData
-    const total = isStaticMode ? filteredData.length : totalLogs
-    const connected = all.filter(c => (c.outcome ?? "").toLowerCase() === "connected").length
-    const notAnswered = all.filter(c => ["not_connected", "no_answer"].includes((c.outcome ?? "").toLowerCase())).length
-    const callbacks = all.filter(c => (c.outcome ?? "").toLowerCase() === "call_back_requested").length
+    const all = filteredData
+    const total = all.length
+    const connected = all.filter(c => 
+      c.outcome === "connected" || 
+      c.outcome === "converted" || 
+      c.outcome === "interested"
+    ).length
+    const notAnswered = all.filter(c => 
+      ["not_connected", "no_answer", "busy", "no_response"].includes(c.outcome ?? "")
+    ).length
+    const callbacks = all.filter(c => 
+      c.outcome === "call_back_requested" || 
+      c.outcome === "call_back_later"
+    ).length
     const overdueFollowUps = all.filter(c => {
       if (!c.follow_up_date) return false
       return new Date(c.follow_up_date) < new Date()
     }).length
-    const connectionRate = all.length > 0 ? (connected / all.length) * 100 : 0
+    const connectionRate = total > 0 ? (connected / total) * 100 : 0
     return { total, connected, notAnswered, callbacks, overdueFollowUps, connectionRate }
-  }, [isStaticMode, filteredData, apiData, totalLogs, apiSummary])
+  }, [filteredData])
 
   React.useEffect(() => {
     if (onStatsChange) {
@@ -658,226 +814,220 @@ export function EnhancedCallLogsTable({
   }, [onStatsChange, stats])
 
   return (
-    <div className={cn("space-y-6 p-6", className)}>
-      {/* Statistics Cards - Now displayed in parent page */}
-      {/* 
-      <div className="grid gap-4 md:grid-cols-5">
-        {[
-          { label: "Total Calls", value: stats.total, icon: Phone, color: "primary" },
-          { label: "Connected", value: stats.connected, icon: CheckCircle, color: "emerald" },
-          { label: "Not Connected", value: stats.notAnswered, icon: XCircle, color: "amber" },
-          { label: "Follow-ups", value: stats.callbacks, icon: Clock, color: "primary" },
-          {
-            label: "Overdue Follow-ups",
-            value: stats.overdueFollowUps,
-            icon: AlertCircle,
-            color: "purple",
-          },
-        ].map((stat) => {
-          const Icon = stat.icon
-          const colorMap: Record<string, string> = {
-            primary: "bg-primary/10 ring-primary/20 text-primary",
-            emerald: "bg-emerald-50 ring-emerald-500/20 text-emerald-600",
-            amber: "bg-amber-50 ring-amber-500/20 text-amber-600",
-            purple: "bg-purple-50 ring-purple-500/20 text-purple-600",
-          }
-          const valueColorMap: Record<string, string> = {
-            primary: "text-primary",
-            emerald: "text-emerald-500",
-            amber: "text-amber-500",
-            purple: "text-purple-500",
-          }
-          return (
-            <Card key={stat.label} className="fresh-card card-hover">
-              <div className="p-4 flex items-center justify-between">
-                <div>
-                  <p className="text-[11px] font-bold text-muted-foreground uppercase tracking-widest leading-none mb-1">{stat.label}</p>
-                  <p className={cn("text-xl font-bold tracking-tight", valueColorMap[stat.color])}>{stat.value}</p>
-                </div>
-                <div className={cn("w-8 h-8 rounded-lg flex items-center justify-center ring-1", colorMap[stat.color])}>
-                  <Icon className="h-4 w-4" />
-                </div>
-              </div>
-            </Card>
-          )
-        })}
-      </div>
-      */}
-
-      {/* Filters */}
-      <div className="flex items-center gap-4">
-        <div className="relative flex-1 max-w-md">
-          <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
-          <Input
-            placeholder="Search by name, mobile number or email"
-            value={searchTerm}
-            onChange={(e) => {
-              setSearchTerm(e.target.value)
-              if (!isStaticMode) setCurrentPage(1)
-            }}
-            className="pl-9"
-          />
-        </div>
-
-        <select
-          value={outcomeFilter}
-          onChange={(e) => {
-            setOutcomeFilter(e.target.value)
-            if (!isStaticMode) setCurrentPage(1)
-          }}
-          className="h-11 rounded-2xl border border-slate-200 bg-white px-4 text-sm font-semibold text-slate-600 shadow-sm focus-visible:ring-2 focus-visible:ring-primary/20"
-        >
-          <option value="all">All outcomes</option>
-          <option value="connected">Connected</option>
-          <option value="not_connected">Not Connected</option>
-          <option value="interested">Interested</option>
-          <option value="not_interested">Not Interested</option>
-          <option value="follow_up_required">Follow-up Required</option>
-        </select>
-
-        {/* {!isStaticMode && (
-          <select
-            value={telecallerFilter}
-            onChange={(e) => {
-              setTelecallerFilter(e.target.value)
-              setCurrentPage(1)
-            }}
-            className="rounded-lg border border-slate-200 bg-white px-3 py-2 text-[13px] font-medium text-slate-600 focus:outline-none focus:ring-2 focus:ring-primary/20 transition-all shadow-sm max-w-[180px]"
-          >
-            <option value="all">All Telecallers</option>
-            {telecallers.map((t) => (
-              <option key={t.id} value={t.id}>{t.name || t.email}</option>
-            ))}
-          </select>
-        )} */}
-
-      
-
-        <select
-          value={dateFilter}
-          onChange={(e) => {
-            setDateFilter(e.target.value)
-            if (!isStaticMode) setCurrentPage(1)
-          }}
-          className="h-11 rounded-2xl border border-slate-200 bg-white px-4 text-sm font-semibold text-slate-600 shadow-sm focus-visible:ring-2 focus-visible:ring-primary/20"
-        >
-          <option value="">All Dates</option>
-          <option value="today">Today</option>
-          <option value="last7days">Last 7 Days</option>
-          <option value="last1month">Last 1 Month</option>
-          <option value="custom">Custom Range</option>
-        </select>
-
-        {dateFilter === "custom" && (
-          <Popover>
-            <PopoverTrigger asChild>
-              <Button
-                variant="outline"
-                className={cn(
-                  "h-11 rounded-2xl border border-slate-200 bg-white px-4 text-sm font-semibold text-slate-600 shadow-sm focus-visible:ring-2 focus-visible:ring-primary/20 justify-start text-left font-normal",
-                  !dateRange && "text-muted-foreground"
-                )}
-              >
-                <CalendarDays className="mr-2 h-4 w-4" />
-                {dateRange?.from ? (
-                  dateRange.to ? (
-                    <>
-                      {formatDate(dateRange.from, "LLL dd, y")} - {formatDate(dateRange.to, "LLL dd, y")}
-                    </>
-                  ) : (
-                    formatDate(dateRange.from, "LLL dd, y")
-                  )
-                ) : (
-                  <span>Pick a date range</span>
-                )}
-              </Button>
-            </PopoverTrigger>
-            <PopoverContent className="w-auto p-0" align="start">
-              <Calendar
-                mode="range"
-                selected={dateRange}
-                onSelect={handleDateRangeSelect}
-                className="rounded-md"
-              />
-              <div className="p-3 border-t">
-                <Button
-                  className="w-full"
-                  onClick={() => {
-                    if (dateRange?.from && dateRange?.to) {
-                      if (!isStaticMode) setCurrentPage(1)
-                    }
-                  }}
-                  disabled={!dateRange?.from || !dateRange?.to}
-                >
-                  Apply Filter
-                </Button>
-              </div>
-            </PopoverContent>
-          </Popover>
-        )}
-      </div>
-
-      {/* Active Filters */}
-      <div className="flex items-center gap-2 flex-wrap">
-        {trimmedSearchTerm && (
-          <div className="inline-flex items-center gap-1 rounded-full border border-slate-200 bg-slate-50 px-3 py-1 text-xs font-medium text-slate-600">
-            <span>Search: {trimmedSearchTerm}</span>
+    <div className={cn("space-y-5", className)}>
+      {/* Scope Switcher & Filter Toolbar */}
+      <div className="flex flex-col gap-3.5 lg:flex-row lg:items-center lg:justify-between">
+        {/* Scoped Caller Segmented Button */}
+        {scopedCallerName ? (
+          <div className="flex items-center gap-1 p-1 bg-slate-100 rounded-2xl border border-slate-200/70 w-fit">
             <button
+              type="button"
+              onClick={() => {
+                setScopeFilter("my_calls")
+                setClientPagination((prev) => ({ ...prev, pageIndex: 0 }))
+              }}
+              className={cn(
+                "flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold transition-all",
+                scopeFilter === "my_calls"
+                  ? "bg-white text-slate-900 shadow-sm border border-slate-200/80"
+                  : "text-slate-500 hover:text-slate-800"
+              )}
+            >
+              <User className="h-3.5 w-3.5 text-primary" />
+              My Call Logs ({scopedCallerName})
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                setScopeFilter("all")
+                setClientPagination((prev) => ({ ...prev, pageIndex: 0 }))
+              }}
+              className={cn(
+                "flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold transition-all",
+                scopeFilter === "all"
+                  ? "bg-white text-slate-900 shadow-sm border border-slate-200/80"
+                  : "text-slate-500 hover:text-slate-800"
+              )}
+            >
+              All Desk Calls
+            </button>
+          </div>
+        ) : <div />}
+
+        {/* Filters Group */}
+        <div className="flex flex-wrap items-center gap-2.5">
+          {/* Search */}
+          <div className="relative flex-1 min-w-[220px] max-w-sm">
+            <Search className="absolute left-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-gray-400" />
+            <Input
+              placeholder="Search lead, phone, reason, or notes..."
+              value={searchTerm}
+              onChange={(e) => {
+                setSearchTerm(e.target.value)
+                setClientPagination((prev) => ({ ...prev, pageIndex: 0 }))
+              }}
+              className="pl-8.5 h-10 rounded-xl text-xs font-medium border-slate-200 bg-white shadow-sm"
+            />
+          </div>
+
+          {/* Outcome Filter */}
+          <select
+            value={outcomeFilter}
+            onChange={(e) => {
+              setOutcomeFilter(e.target.value)
+              setClientPagination((prev) => ({ ...prev, pageIndex: 0 }))
+            }}
+            className="h-10 rounded-xl border border-slate-200 bg-white px-3 text-xs font-bold text-slate-700 shadow-sm focus:outline-none focus:ring-2 focus:ring-primary/20"
+          >
+            <option value="all">All Outcomes</option>
+            <option value="connected">Connected</option>
+            <option value="call_back_requested">Callback Requested</option>
+            <option value="follow_up_required">Follow-up Required</option>
+            <option value="converted">Converted</option>
+            <option value="not_connected">Not Answered</option>
+            <option value="busy">Busy</option>
+          </select>
+
+          {/* Date Filter */}
+          <select
+            value={dateFilter}
+            onChange={(e) => {
+              setDateFilter(e.target.value)
+              setClientPagination((prev) => ({ ...prev, pageIndex: 0 }))
+            }}
+            className="h-10 rounded-xl border border-slate-200 bg-white px-3 text-xs font-bold text-slate-700 shadow-sm focus:outline-none focus:ring-2 focus:ring-primary/20"
+          >
+            <option value="">All Dates</option>
+            <option value="today">Today</option>
+            <option value="yesterday">Yesterday</option>
+            <option value="last7days">Last 7 Days</option>
+            <option value="last1month">Last 1 Month</option>
+            <option value="custom">Custom Range</option>
+          </select>
+
+          {dateFilter === "custom" && (
+            <Popover>
+              <PopoverTrigger asChild>
+                <Button
+                  variant="outline"
+                  className={cn(
+                    "h-10 rounded-xl border border-slate-200 bg-white px-3 text-xs font-semibold text-slate-600 shadow-sm justify-start text-left font-normal",
+                    !dateRange && "text-muted-foreground"
+                  )}
+                >
+                  <CalendarDays className="mr-1.5 h-3.5 w-3.5" />
+                  {dateRange?.from ? (
+                    dateRange.to ? (
+                      <>
+                        {formatDate(dateRange.from, "LLL dd, y")} - {formatDate(dateRange.to, "LLL dd, y")}
+                      </>
+                    ) : (
+                      formatDate(dateRange.from, "LLL dd, y")
+                    )
+                  ) : (
+                    <span>Pick a date range</span>
+                  )}
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-auto p-0" align="start">
+                <Calendar
+                  mode="range"
+                  selected={dateRange}
+                  onSelect={handleDateRangeSelect}
+                  className="rounded-md"
+                />
+                <div className="p-3 border-t">
+                  <Button
+                    className="w-full h-8 text-xs font-bold"
+                    onClick={() => {
+                      if (dateRange?.from && dateRange?.to) {
+                        setClientPagination((prev) => ({ ...prev, pageIndex: 0 }))
+                      }
+                    }}
+                    disabled={!dateRange?.from || !dateRange?.to}
+                  >
+                    Apply Filter
+                  </Button>
+                </div>
+              </PopoverContent>
+            </Popover>
+          )}
+        </div>
+      </div>
+
+      {/* Active Filter Chips & Status */}
+      <div className="flex items-center justify-between flex-wrap gap-2 pt-1 border-t border-slate-100">
+        <div className="flex items-center gap-2 flex-wrap">
+          {scopeFilter === "my_calls" && scopedCallerName && (
+            <div className="inline-flex items-center gap-1.5 rounded-full border border-blue-200 bg-blue-50/70 px-3 py-1 text-[11px] font-bold text-blue-700">
+              <User className="h-3 w-3" />
+              <span>Scope: {scopedCallerName}</span>
+            </div>
+          )}
+          {trimmedSearchTerm && (
+            <div className="inline-flex items-center gap-1 rounded-full border border-slate-200 bg-slate-50 px-3 py-1 text-xs font-medium text-slate-600">
+              <span>Search: {trimmedSearchTerm}</span>
+              <button
+                onClick={() => {
+                  setSearchTerm("")
+                  setClientPagination((prev) => ({ ...prev, pageIndex: 0 }))
+                }}
+                className="ml-1 text-slate-400 hover:text-slate-600"
+              >
+                <X className="h-3 w-3" />
+              </button>
+            </div>
+          )}
+          {outcomeFilter !== "all" && (
+            <div className="inline-flex items-center gap-1 rounded-full border border-slate-200 bg-slate-50 px-3 py-1 text-xs font-medium text-slate-600">
+              <span>Outcome: {outcomeFilter}</span>
+              <button
+                onClick={() => {
+                  setOutcomeFilter("all")
+                  setClientPagination((prev) => ({ ...prev, pageIndex: 0 }))
+                }}
+                className="ml-1 text-slate-400 hover:text-slate-600"
+              >
+                <X className="h-3 w-3" />
+              </button>
+            </div>
+          )}
+          {dateFilter && (
+            <div className="inline-flex items-center gap-1 rounded-full border border-slate-200 bg-slate-50 px-3 py-1 text-xs font-medium text-slate-600">
+              <span>Date: {dateFilter === "today" ? "Today" : dateFilter === "yesterday" ? "Yesterday" : dateFilter === "last7days" ? "Last 7 Days" : dateFilter === "last1month" ? "Last 1 Month" : dateFilter === "custom" && dateRange?.from && dateRange?.to ? `${formatDate(dateRange.from, "MMM dd")} - ${formatDate(dateRange.to, "MMM dd")}` : dateFilter}</span>
+              <button
+                onClick={() => {
+                  setDateFilter("")
+                  setDateRange(undefined)
+                  setClientPagination((prev) => ({ ...prev, pageIndex: 0 }))
+                }}
+                className="ml-1 text-slate-400 hover:text-slate-600"
+              >
+                <X className="h-3 w-3" />
+              </button>
+            </div>
+          )}
+          {(searchTerm || outcomeFilter !== "all" || dateFilter) && (
+            <Button
+              variant="outline"
+              size="sm"
               onClick={() => {
                 setSearchTerm("")
-                if (!isStaticMode) setCurrentPage(1)
-              }}
-              className="ml-1 text-slate-400 hover:text-slate-600"
-            >
-              <X className="h-3 w-3" />
-            </button>
-          </div>
-        )}
-        {outcomeFilter !== "all" && (
-          <div className="inline-flex items-center gap-1 rounded-full border border-slate-200 bg-slate-50 px-3 py-1 text-xs font-medium text-slate-600">
-            <span>Outcome: {outcomeFilter === "connected" ? "Connected" : outcomeFilter === "not_connected" ? "Not Connected" : outcomeFilter === "interested" ? "Interested" : outcomeFilter === "not_interested" ? "Not Interested" : "Follow-up Required"}</span>
-            <button
-              onClick={() => {
                 setOutcomeFilter("all")
-                if (!isStaticMode) setCurrentPage(1)
-              }}
-              className="ml-1 text-slate-400 hover:text-slate-600"
-            >
-              <X className="h-3 w-3" />
-            </button>
-          </div>
-        )}
-        {dateFilter && (
-          <div className="inline-flex items-center gap-1 rounded-full border border-slate-200 bg-slate-50 px-3 py-1 text-xs font-medium text-slate-600">
-            <span>Date: {dateFilter === "today" ? "Today" : dateFilter === "last7days" ? "Last 7 Days" : dateFilter === "last1month" ? "Last 1 Month" : dateFilter === "custom" && dateRange?.from && dateRange?.to ? `${formatDate(dateRange.from, "MMM dd")} - ${formatDate(dateRange.to, "MMM dd")}` : "All Dates"}</span>
-            <button
-              onClick={() => {
                 setDateFilter("")
                 setDateRange(undefined)
-                if (!isStaticMode) setCurrentPage(1)
+                setClientPagination((prev) => ({ ...prev, pageIndex: 0 }))
               }}
-              className="ml-1 text-slate-400 hover:text-slate-600"
+              className="h-7 rounded-full border-slate-200 text-xs"
             >
-              <X className="h-3 w-3" />
-            </button>
-          </div>
-        )}
-        {(searchTerm || outcomeFilter !== "all" || dateFilter) && (
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => {
-              setSearchTerm("")
-              setOutcomeFilter("all")
-              setDateFilter("")
-              setDateRange(undefined)
-              if (!isStaticMode) setCurrentPage(1)
-            }}
-            className="h-7 rounded-full border-slate-200 text-xs"
-          >
-            Reset All
-          </Button>
-        )}
+              Reset All
+            </Button>
+          )}
+        </div>
+
+        <div className="text-[11px] font-semibold text-slate-500">
+          Showing <strong className="text-slate-900">{filteredData.length}</strong> calls
+        </div>
       </div>
 
       {/* Error */}
@@ -961,48 +1111,28 @@ export function EnhancedCallLogsTable({
       <div className="flex flex-col gap-3 rounded-2xl border border-slate-100/80 bg-white/80 px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
         <div className="flex flex-col gap-2 text-sm text-slate-500 sm:flex-row sm:items-center sm:gap-4">
           <span>
-            {isStaticMode ? (
-              paginationSummary.total === 0 ? (
-                "No call logs to display"
-              ) : (
-                <>
-                  Showing {paginationSummary.start}-{paginationSummary.end} of {paginationSummary.total} call logs
-                  <span className="ml-2">
-                    (Page {clientPagination.pageIndex + 1} of {Math.max(1, Math.ceil(paginationSummary.total / clientPagination.pageSize))})
-                  </span>
-                </>
-              )
-            ) : paginationMeta ? (
-              paginationMeta.total === 0 ? (
-                "No call logs to display"
-              ) : (
-                <>
-                  Showing {apiData.length} of {paginationMeta.total} call logs
-                  {paginationMeta.totalPages > 0 && (
-                    <span className="ml-2">(Page {paginationMeta.page} of {paginationMeta.totalPages})</span>
-                  )}
-                </>
-              )
+            {paginationSummary.total === 0 ? (
+              "No call logs to display"
             ) : (
-              "Loading pagination..."
+              <>
+                Showing {paginationSummary.start}-{paginationSummary.end} of {paginationSummary.total} call logs
+                <span className="ml-2">
+                  (Page {clientPagination.pageIndex + 1} of {Math.max(1, Math.ceil(paginationSummary.total / clientPagination.pageSize))})
+                </span>
+              </>
             )}
           </span>
           <div className="flex items-center gap-2">
             <span>Per page</span>
             <Select
-              value={`${isStaticMode ? clientPagination.pageSize : pageSize}`}
+              value={`${clientPagination.pageSize}`}
               onValueChange={(value) => {
                 const nextSize = Number(value)
-                if (isStaticMode) {
-                  setClientPagination((prev) => ({ ...prev, pageSize: nextSize, pageIndex: 0 }))
-                } else {
-                  setPageSize(nextSize)
-                  setCurrentPage(1)
-                }
+                setClientPagination((prev) => ({ ...prev, pageSize: nextSize, pageIndex: 0 }))
               }}
             >
               <SelectTrigger className="h-8 w-[80px] rounded-full border-slate-200/80 bg-white">
-                <SelectValue placeholder={isStaticMode ? clientPagination.pageSize : pageSize} />
+                <SelectValue placeholder={clientPagination.pageSize} />
               </SelectTrigger>
               <SelectContent side="top">
                 {[10, 20, 30, 40, 50].map((size) => (
@@ -1015,42 +1145,29 @@ export function EnhancedCallLogsTable({
           </div>
         </div>
         <div className="flex items-center gap-2">
-          {isStaticMode ? (
-            <>
-              <Button variant="outline" size="sm" className="rounded-full border-slate-200/80 px-4" onClick={() => table.previousPage()} disabled={!table.getCanPreviousPage()}>
-                Previous
-              </Button>
-              <Button variant="outline" size="sm" className="rounded-full border-slate-200/80 px-4" onClick={() => table.nextPage()} disabled={!table.getCanNextPage()}>
-                Next
-              </Button>
-            </>
-          ) : (
-            <>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
-                disabled={!paginationMeta?.hasPrev || isLoading}
-                className="rounded-full border-slate-200/80 px-4"
-              >
-                Previous
-              </Button>
-              <div className="flex items-center gap-1 text-sm text-slate-500">
-                <span>Page</span>
-                <span className="font-medium text-slate-900">{paginationMeta?.page ?? currentPage}</span>
-                <span>of {derivedTotalPages}</span>
-              </div>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => setCurrentPage((p) => p + 1)}
-                disabled={!paginationMeta?.hasNext || isLoading}
-                className="rounded-full border-slate-200/80 px-4"
-              >
-                Next
-              </Button>
-            </>
-          )}
+          <Button
+            variant="outline"
+            size="sm"
+            className="rounded-full border-slate-200/80 px-4"
+            onClick={() => table.previousPage()}
+            disabled={!table.getCanPreviousPage()}
+          >
+            Previous
+          </Button>
+          <div className="flex items-center gap-1 text-sm text-slate-500">
+            <span>Page</span>
+            <span className="font-medium text-slate-900">{clientPagination.pageIndex + 1}</span>
+            <span>of {Math.max(1, Math.ceil(paginationSummary.total / clientPagination.pageSize))}</span>
+          </div>
+          <Button
+            variant="outline"
+            size="sm"
+            className="rounded-full border-slate-200/80 px-4"
+            onClick={() => table.nextPage()}
+            disabled={!table.getCanNextPage()}
+          >
+            Next
+          </Button>
         </div>
       </div>
     </div>

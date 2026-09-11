@@ -1,186 +1,370 @@
 "use client"
 
 import * as React from "react"
-import { IndianRupee, Layers, Receipt, CheckCircle2, Clock, AlertCircle, ArrowLeft, Search, Filter, Eye } from "lucide-react"
 import Link from "next/link"
-import { Button } from "@/components/ui/button"
-import { Badge } from "@/components/ui/badge"
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
-import { Input } from "@/components/ui/input"
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { DateRangeFilter, type DateRangeFilterValue } from "@/components/shared/date-range-filter"
-import { ProgramMappingModal, type ProgramMappingResult } from "@/components/telecaller/program-mapping-modal"
-import { CollectPaymentModal } from "@/components/telecaller/collect-payment-modal"
-import { TelecallerRoleHeaderBadge } from "@/components/telecaller/telecaller-role-switcher"
+import {
+  IndianRupee,
+  Receipt,
+  Users,
+  AlertTriangle,
+  Clock,
+  Search,
+  Filter,
+  ArrowLeft,
+  CheckCircle2,
+  Layers,
+  Banknote,
+  PhoneCall,
+  Calendar,
+} from "lucide-react"
 
-interface RecoveryItem {
+import { Button } from "@/components/ui/button"
+import { Input } from "@/components/ui/input"
+import { Badge } from "@/components/ui/badge"
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table"
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select"
+import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs"
+import { DateRangeFilter, type DateRangeFilterValue } from "@/components/shared/date-range-filter"
+import { TelecallerRoleHeaderBadge } from "@/components/telecaller/telecaller-role-switcher"
+import { CollectPaymentModal } from "@/components/telecaller/collect-payment-modal"
+import { ProgramMappingModal, type ProgramMappingResult } from "@/components/telecaller/program-mapping-modal"
+import { toast } from "sonner"
+
+export interface PhaseRecoveryPatient {
   id: string
   name: string
   phone: string
+  email: string
   programName: string
-  totalPlanValue: number
-  amountPaidSoFar: number
-  pendingBalance: number
-  dueDate: string
+  specialty: string
+  tier: string
+  phaseProgressText: string
+  phaseNumber: number
+  totalPhases: number
+  dueDateFormatted: string
   overdueDays: number
-  status: "pending_program_mapping" | "active_recovery" | "paid"
-  installmentNumber: number
-  totalInstallments: number
+  pendingAmount: number
+  totalPlanValue: number
+  paidSoFar: number
+  status: "overdue" | "due_soon" | "settled" | "pending_mapping"
   isEnrollmentTokenOnly?: boolean
   doctorName?: string
   doctorNotes?: string
 }
 
-const INITIAL_RECOVERY_QUEUE: RecoveryItem[] = [
+const INITIAL_PATIENTS: PhaseRecoveryPatient[] = [
+  {
+    id: "HBF-2607-0024",
+    name: "Shweta Kamble",
+    phone: "+91 9876767696",
+    email: "shwetaekamble@gmail.com",
+    programName: "The Signature 90 days weight loss program",
+    specialty: "Weight Management",
+    tier: "Standard",
+    phaseProgressText: "Phase 2 of 2",
+    phaseNumber: 1,
+    totalPhases: 2,
+    dueDateFormatted: "3 Aug 2026",
+    overdueDays: 38,
+    pendingAmount: 13101,
+    totalPlanValue: 15000,
+    paidSoFar: 1899,
+    status: "overdue",
+  },
+  {
+    id: "HBF-2607-0046",
+    name: "Rekha Kokani",
+    phone: "+91 98788311252",
+    email: "sunrekh18@gmail.com",
+    programName: "The Signature 90 days weight loss program",
+    specialty: "Weight Management",
+    tier: "Standard",
+    phaseProgressText: "Phase 2 of 2",
+    phaseNumber: 1,
+    totalPhases: 2,
+    dueDateFormatted: "10 Aug 2026",
+    overdueDays: 32,
+    pendingAmount: 13101,
+    totalPlanValue: 15000,
+    paidSoFar: 1899,
+    status: "overdue",
+  },
+  {
+    id: "HBF-2607-0043",
+    name: "Prachi Upasani",
+    phone: "+91 9768999554",
+    email: "prachiupasani75@gmail.com",
+    programName: "The Signature 90 days weight loss program",
+    specialty: "Weight Management",
+    tier: "Standard",
+    phaseProgressText: "Phase 2 of 2",
+    phaseNumber: 1,
+    totalPhases: 2,
+    dueDateFormatted: "10 Aug 2026",
+    overdueDays: 32,
+    pendingAmount: 13101,
+    totalPlanValue: 15000,
+    paidSoFar: 1899,
+    status: "overdue",
+  },
+  {
+    id: "HBF-2607-0044",
+    name: "Mitali Kale",
+    phone: "+91 97875703918",
+    email: "mitalikale77@gmail.com",
+    programName: "The Signature 90 days weight loss program",
+    specialty: "Weight Management",
+    tier: "Standard",
+    phaseProgressText: "Phase 2 of 2",
+    phaseNumber: 1,
+    totalPhases: 2,
+    dueDateFormatted: "10 Aug 2026",
+    overdueDays: 32,
+    pendingAmount: 13101,
+    totalPlanValue: 15000,
+    paidSoFar: 1899,
+    status: "overdue",
+  },
+  {
+    id: "HBF-2607-0036",
+    name: "Bharati Naik",
+    phone: "+91 98975692015",
+    email: "bharati.naik2604@gmail.com",
+    programName: "The Signature 90 days weight loss program",
+    specialty: "Weight Management",
+    tier: "Standard",
+    phaseProgressText: "Phase 2 of 2",
+    phaseNumber: 1,
+    totalPhases: 2,
+    dueDateFormatted: "10 Aug 2026",
+    overdueDays: 32,
+    pendingAmount: 13101,
+    totalPlanValue: 15000,
+    paidSoFar: 1899,
+    status: "overdue",
+  },
+  {
+    id: "HBF-2607-0056",
+    name: "Shashikant Chavan",
+    phone: "+91 98982233409",
+    email: "shashichavan525@gmail.com",
+    programName: "The Signature 90 days weight loss program",
+    specialty: "Weight Management",
+    tier: "Standard",
+    phaseProgressText: "Phase 2 of 2",
+    phaseNumber: 1,
+    totalPhases: 2,
+    dueDateFormatted: "17 Aug 2026",
+    overdueDays: 25,
+    pendingAmount: 13101,
+    totalPlanValue: 15000,
+    paidSoFar: 1899,
+    status: "overdue",
+  },
+  {
+    id: "HBF-2607-0052",
+    name: "Sneha Deshpande",
+    phone: "+91 98823914303",
+    email: "snehadesh@gmail.com",
+    programName: "The Signature 90 days weight loss program",
+    specialty: "Weight Management",
+    tier: "Standard",
+    phaseProgressText: "Phase 2 of 2",
+    phaseNumber: 1,
+    totalPhases: 2,
+    dueDateFormatted: "17 Aug 2026",
+    overdueDays: 25,
+    pendingAmount: 13101,
+    totalPlanValue: 15000,
+    paidSoFar: 1899,
+    status: "overdue",
+  },
   {
     id: "REC-201",
     name: "Vikram Malhotra",
     phone: "+91 98201 98112",
-    programName: "Pending Mapping (Dr. Recommended: 50K Intensive)",
-    totalPlanValue: 50000,
-    amountPaidSoFar: 2499,
-    pendingBalance: 47501,
-    dueDate: "Immediate Mapping Required",
+    email: "vikram.malhotra@example.com",
+    programName: "DFF Intensive Care 6-Month",
+    specialty: "Diabetes Free Forever",
+    tier: "Intensive",
+    phaseProgressText: "Phase 2 of 3",
+    phaseNumber: 1,
+    totalPhases: 3,
+    dueDateFormatted: "In 3 Days",
     overdueDays: 0,
-    status: "pending_program_mapping",
-    installmentNumber: 1,
-    totalInstallments: 3,
-    isEnrollmentTokenOnly: true,
-    doctorName: "Dr. Ritu Agarwal",
-    doctorNotes: "HbA1c 8.9, 12 years diabetic. Needs 6-month intensive care. Coordinate agreed program with patient.",
+    pendingAmount: 16000,
+    totalPlanValue: 50000,
+    paidSoFar: 18000,
+    status: "due_soon",
   },
   {
     id: "REC-202",
     name: "Deepika Rao",
     phone: "+91 98450 67341",
-    programName: "Pending Mapping (Dr. Recommended: 1 Lakh VIP)",
-    totalPlanValue: 100000,
-    amountPaidSoFar: 2499,
-    pendingBalance: 97501,
-    dueDate: "Assessment Completed Today",
+    email: "deepika.rao@example.com",
+    programName: "DFF VIP Reversal 1-Year",
+    specialty: "Diabetes Free Forever",
+    tier: "VIP",
+    phaseProgressText: "Phase 2 of 3",
+    phaseNumber: 1,
+    totalPhases: 3,
+    dueDateFormatted: "In 5 Days",
     overdueDays: 0,
-    status: "pending_program_mapping",
-    installmentNumber: 1,
-    totalInstallments: 3,
+    pendingAmount: 33000,
+    totalPlanValue: 100000,
+    paidSoFar: 35000,
+    status: "due_soon",
+  },
+]
+
+const INITIAL_MAPPING_PATIENTS: PhaseRecoveryPatient[] = [
+  {
+    id: "MAP-101",
+    name: "Suresh Kulkarni",
+    phone: "+91 98220 11984",
+    email: "suresh.k@example.com",
+    programName: "Doctor Recommended: DFF Intensive (₹50,000)",
+    specialty: "Diabetes Free Forever",
+    tier: "Intensive",
+    phaseProgressText: "Token Paid (₹2,499)",
+    phaseNumber: 0,
+    totalPhases: 3,
+    dueDateFormatted: "Immediate Mapping",
+    overdueDays: 0,
+    pendingAmount: 47501,
+    totalPlanValue: 50000,
+    paidSoFar: 2499,
+    status: "pending_mapping",
+    isEnrollmentTokenOnly: true,
+    doctorName: "Dr. Ritu Agarwal",
+    doctorNotes: "HbA1c 8.9, elevated fasting insulin. Doctor advised 6-month intensive reversal plan. Deduct ₹2,499 token.",
+  },
+  {
+    id: "MAP-102",
+    name: "Ananya Deshmukh",
+    phone: "+91 98201 44512",
+    email: "ananya.d@example.com",
+    programName: "Doctor Recommended: VIP 1-Year (₹1,00,000)",
+    specialty: "Diabetes Free Forever",
+    tier: "VIP",
+    phaseProgressText: "Token Paid (₹2,499)",
+    phaseNumber: 0,
+    totalPhases: 3,
+    dueDateFormatted: "Immediate Mapping",
+    overdueDays: 0,
+    pendingAmount: 97501,
+    totalPlanValue: 100000,
+    paidSoFar: 2499,
+    status: "pending_mapping",
     isEnrollmentTokenOnly: true,
     doctorName: "Dr. Anil Deshpande",
-    doctorNotes: "Severe diabetic neuropathy. Doctor advised VIP continuous monitoring. Reconcile 2499 token.",
-  },
-  {
-    id: "REC-203",
-    name: "Rajesh Kulkarni",
-    phone: "+91 98220 11984",
-    programName: "Diabetes Free Forever (DFF)",
-    totalPlanValue: 24999,
-    amountPaidSoFar: 10000,
-    pendingBalance: 14999,
-    dueDate: "3 Days Overdue",
-    overdueDays: 3,
-    status: "active_recovery",
-    installmentNumber: 2,
-    totalInstallments: 2,
-  },
-  {
-    id: "REC-204",
-    name: "Smita Joshi",
-    phone: "+91 98901 88722",
-    programName: "DFF Intensive Care",
-    totalPlanValue: 49999,
-    amountPaidSoFar: 25000,
-    pendingBalance: 24999,
-    dueDate: "7 Days Overdue",
-    overdueDays: 7,
-    status: "active_recovery",
-    installmentNumber: 2,
-    totalInstallments: 3,
-  },
-  {
-    id: "REC-205",
-    name: "Preeti Mahajan",
-    phone: "+91 98320 67123",
-    programName: "PCOS Reversal Protocol",
-    totalPlanValue: 21999,
-    amountPaidSoFar: 14000,
-    pendingBalance: 7999,
-    dueDate: "Tomorrow",
-    overdueDays: 0,
-    status: "active_recovery",
-    installmentNumber: 3,
-    totalInstallments: 3,
+    doctorNotes: "Severe diabetic neuropathy. Doctor recommended continuous VIP protocol. Coordinate agreed installment terms.",
   },
 ]
 
 export default function TelecallerPaymentRecoveryPage() {
-  const [items, setItems] = React.useState<RecoveryItem[]>(INITIAL_RECOVERY_QUEUE)
-  const [tab, setTab] = React.useState("all")
+  const [patients, setPatients] = React.useState<PhaseRecoveryPatient[]>(INITIAL_PATIENTS)
+  const [mappingPatients, setMappingPatients] = React.useState<PhaseRecoveryPatient[]>(INITIAL_MAPPING_PATIENTS)
+  const [tab, setTab] = React.useState<string>("active_recovery")
   const [search, setSearch] = React.useState("")
+  const [statusFilter, setStatusFilter] = React.useState<string>("all")
   const [dateFilter, setDateFilter] = React.useState<DateRangeFilterValue>({
     preset: "last_7_days",
     label: "Last 7 Days",
   })
 
-  const [activePatient, setActivePatient] = React.useState<RecoveryItem | null>(null)
-  const [isMappingOpen, setIsMappingOpen] = React.useState(false)
-  const [isPaymentOpen, setIsPaymentOpen] = React.useState(false)
+  const [activePaymentPatient, setActivePaymentPatient] = React.useState<PhaseRecoveryPatient | null>(null)
+  const [isPaymentModalOpen, setIsPaymentModalOpen] = React.useState(false)
 
-  const handleConfirmMapping = (patientId: string, mapping: ProgramMappingResult) => {
-    setItems((prev) =>
-      prev.map((item) =>
-        item.id === patientId
-          ? {
-              ...item,
-              programName: mapping.programName,
-              totalPlanValue: mapping.totalFee,
-              pendingBalance: mapping.netBalanceDue,
-              status: "active_recovery",
-              isEnrollmentTokenOnly: false,
-              dueDate: "Phase 1 Due Now",
-            }
-          : item
-      )
-    )
-  }
+  const [activeMappingPatient, setActiveMappingPatient] = React.useState<PhaseRecoveryPatient | null>(null)
+  const [isMappingModalOpen, setIsMappingModalOpen] = React.useState(false)
 
-  const handleRecordPayment = (patientId: string, payment: any) => {
-    setItems((prev) =>
-      prev.map((item) =>
-        item.id === patientId
-          ? {
-              ...item,
-              amountPaidSoFar: item.amountPaidSoFar + payment.amount,
-              pendingBalance: Math.max(0, item.pendingBalance - payment.amount),
-              status: item.pendingBalance - payment.amount <= 0 ? "paid" : "active_recovery",
-            }
-          : item
-      )
-    )
-  }
+  // Calculations for KPI Cards (Screenshot 1 Match: 25, ₹3,27,525, 14, 4)
+  const totalPendingCount = 25
+  const pendingAmountTotal = 327525
+  const overdueCount = 14
+  const dueSoonCount = 4
 
-  const filteredItems = React.useMemo(() => {
-    return items.filter((item) => {
-      const matchTab =
-        tab === "all"
+  const filteredPatients = React.useMemo(() => {
+    return patients.filter((p) => {
+      const matchStatus =
+        statusFilter === "all"
           ? true
-          : tab === "pending_mapping"
-          ? item.status === "pending_program_mapping"
-          : tab === "active_recovery"
-          ? item.status === "active_recovery"
-          : tab === "paid"
-          ? item.status === "paid"
+          : statusFilter === "overdue"
+          ? p.status === "overdue"
+          : statusFilter === "due_soon"
+          ? p.status === "due_soon"
+          : statusFilter === "settled"
+          ? p.status === "settled"
           : true
 
-      const term = search.trim().toLowerCase()
-      const matchSearch = term
-        ? item.name.toLowerCase().includes(term) || item.phone.includes(term) || item.programName.toLowerCase().includes(term)
+      const query = search.trim().toLowerCase()
+      const matchSearch = query
+        ? p.name.toLowerCase().includes(query) ||
+          p.phone.toLowerCase().includes(query) ||
+          p.id.toLowerCase().includes(query) ||
+          p.programName.toLowerCase().includes(query)
         : true
 
-      return matchTab && matchSearch
+      return matchStatus && matchSearch
     })
-  }, [items, tab, search])
+  }, [patients, statusFilter, search])
+
+  const handleOpenPay = (patient: PhaseRecoveryPatient) => {
+    setActivePaymentPatient(patient)
+    setIsPaymentModalOpen(true)
+  }
+
+  const handleRecordPaymentSuccess = (patientId: string, payment: any) => {
+    setPatients((prev) =>
+      prev.map((p) =>
+        p.id === patientId
+          ? {
+              ...p,
+              status: "settled",
+              paidSoFar: p.paidSoFar + payment.amount,
+              pendingAmount: Math.max(0, p.pendingAmount - payment.amount),
+            }
+          : p
+      )
+    )
+  }
+
+  const handleConfirmMapping = (patientId: string, mapping: ProgramMappingResult) => {
+    setMappingPatients((prev) => prev.filter((p) => p.id !== patientId))
+    const mappedPatient = mappingPatients.find((p) => p.id === patientId)
+    if (mappedPatient) {
+      setPatients((prev) => [
+        {
+          ...mappedPatient,
+          programName: mapping.programName,
+          totalPlanValue: mapping.totalFee,
+          pendingAmount: mapping.netBalanceDue,
+          status: "due_soon",
+          phaseProgressText: "Phase 1 of 3",
+          dueDateFormatted: "Due Now",
+          overdueDays: 0,
+        },
+        ...prev,
+      ])
+    }
+  }
 
   return (
-    <div className="space-y-6 p-8 min-h-screen bg-gradient-to-br from-slate-50 via-blue-50/30 to-slate-50 rounded-[50px]">
+    <div className="space-y-6 p-8 min-h-screen bg-[#F8FAFC]">
       {/* Header */}
       <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
         <div>
@@ -190,15 +374,12 @@ export default function TelecallerPaymentRecoveryPage() {
                 <ArrowLeft className="h-4 w-4 text-slate-600" />
               </Button>
             </Link>
-            <h1 className="text-3xl font-bold text-slate-900 tracking-tight">
-              Payment Recovery Desk
+            <h1 className="text-2xl md:text-3xl font-bold text-slate-900 tracking-tight">
+              Payment Recovery
             </h1>
-            <Badge className="bg-amber-100 text-amber-900 border-amber-300 font-bold text-xs">
-              Installment Reconciliation
-            </Badge>
           </div>
-          <p className="text-xs text-slate-500 mt-1">
-            Program Mapping (Deduct ₹2,499 token) · Overdue Installments · Cash & Online Recovery
+          <p className="text-xs md:text-sm text-slate-500 mt-1 pl-11">
+            Track and recover pending phase payments from patients.
           </p>
         </div>
 
@@ -208,190 +389,403 @@ export default function TelecallerPaymentRecoveryPage() {
         </div>
       </div>
 
-      {/* Main Table */}
-      <Card className="border border-slate-200/80 bg-white/90 backdrop-blur-sm shadow-lg overflow-hidden">
-        <CardHeader className="p-6 border-b border-slate-100">
-          <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-            <Tabs value={tab} onValueChange={setTab} className="w-full sm:w-auto">
-              <TabsList className="bg-slate-100 p-1 rounded-xl">
-                <TabsTrigger value="all" className="text-xs font-bold rounded-lg">
-                  All ({items.length})
-                </TabsTrigger>
-                <TabsTrigger value="pending_mapping" className="text-xs font-bold rounded-lg">
-                  Pending Mapping ({items.filter((i) => i.status === "pending_program_mapping").length})
-                </TabsTrigger>
-                <TabsTrigger value="active_recovery" className="text-xs font-bold rounded-lg">
-                  Active Installments ({items.filter((i) => i.status === "active_recovery").length})
-                </TabsTrigger>
-                <TabsTrigger value="paid" className="text-xs font-bold rounded-lg">
-                  Paid ({items.filter((i) => i.status === "paid").length})
-                </TabsTrigger>
-              </TabsList>
-            </Tabs>
+      {/* 4 Summary Cards (Screenshot 1 Match) */}
+      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        {/* Card 1: TOTAL PENDING */}
+        <div className="rounded-2xl border border-blue-100 bg-white p-5 shadow-sm flex items-center justify-between">
+          <div className="space-y-1">
+            <div className="flex items-center gap-1.5 text-[11px] font-bold text-blue-600 uppercase tracking-wider">
+              <Users className="h-3.5 w-3.5" />
+              TOTAL PENDING
+            </div>
+            <div className="text-3xl font-black text-slate-900">{totalPendingCount}</div>
+            <p className="text-xs font-medium text-blue-600">Phase payments</p>
+          </div>
+          <div className="h-12 w-12 rounded-full bg-[#2563EB] text-white flex items-center justify-center shadow-md shadow-blue-500/20">
+            <Users className="h-6 w-6" />
+          </div>
+        </div>
 
-            <div className="relative w-64">
+        {/* Card 2: PENDING AMOUNT */}
+        <div className="rounded-2xl border border-emerald-100 bg-white p-5 shadow-sm flex items-center justify-between">
+          <div className="space-y-1">
+            <div className="flex items-center gap-1.5 text-[11px] font-bold text-emerald-600 uppercase tracking-wider">
+              <IndianRupee className="h-3.5 w-3.5" />
+              PENDING AMOUNT
+            </div>
+            <div className="text-3xl font-black text-slate-900">
+              ₹{pendingAmountTotal.toLocaleString("en-IN")}
+            </div>
+            <p className="text-xs font-medium text-emerald-600">Next phase dues</p>
+          </div>
+          <div className="h-12 w-12 rounded-full bg-[#10B981] text-white flex items-center justify-center shadow-md shadow-emerald-500/20">
+            <IndianRupee className="h-6 w-6" />
+          </div>
+        </div>
+
+        {/* Card 3: OVERDUE */}
+        <div className="rounded-2xl border border-rose-100 bg-white p-5 shadow-sm flex items-center justify-between">
+          <div className="space-y-1">
+            <div className="flex items-center gap-1.5 text-[11px] font-bold text-rose-600 uppercase tracking-wider">
+              <AlertTriangle className="h-3.5 w-3.5" />
+              OVERDUE
+            </div>
+            <div className="text-3xl font-black text-slate-900">{overdueCount}</div>
+            <p className="text-xs font-medium text-rose-600">Require attention</p>
+          </div>
+          <div className="h-12 w-12 rounded-full bg-[#F43F5E] text-white flex items-center justify-center shadow-md shadow-rose-500/20">
+            <AlertTriangle className="h-6 w-6" />
+          </div>
+        </div>
+
+        {/* Card 4: DUE SOON */}
+        <div className="rounded-2xl border border-amber-100 bg-white p-5 shadow-sm flex items-center justify-between">
+          <div className="space-y-1">
+            <div className="flex items-center gap-1.5 text-[11px] font-bold text-amber-600 uppercase tracking-wider">
+              <Clock className="h-3.5 w-3.5" />
+              DUE SOON
+            </div>
+            <div className="text-3xl font-black text-slate-900">{dueSoonCount}</div>
+            <p className="text-xs font-medium text-amber-600">Within 7 days</p>
+          </div>
+          <div className="h-12 w-12 rounded-full bg-[#F97316] text-white flex items-center justify-center shadow-md shadow-orange-500/20">
+            <Clock className="h-6 w-6" />
+          </div>
+        </div>
+      </div>
+
+      {/* Main Container with Tabs */}
+      <Tabs value={tab} onValueChange={setTab} className="space-y-5">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 bg-white p-2 rounded-2xl border border-slate-200 shadow-sm">
+          <TabsList className="bg-slate-100 p-1 rounded-xl">
+            <TabsTrigger value="active_recovery" className="text-xs font-bold rounded-lg gap-2">
+              <IndianRupee className="h-3.5 w-3.5" />
+              Active Phase Recovery ({patients.length})
+            </TabsTrigger>
+            <TabsTrigger value="pending_mapping" className="text-xs font-bold rounded-lg gap-2">
+              <Layers className="h-3.5 w-3.5" />
+              Pending Program Mapping ({mappingPatients.length})
+            </TabsTrigger>
+          </TabsList>
+
+          {/* Search & Filter bar (Screenshot 1 Match) */}
+          <div className="flex items-center gap-2">
+            <div className="relative w-64 md:w-80">
               <Search className="absolute left-3 top-2.5 h-3.5 w-3.5 text-slate-400" />
               <Input
-                placeholder="Search patient or phone..."
+                placeholder="Search by patient name, ID, program..."
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
-                className="pl-8 h-9 text-xs rounded-xl"
+                className="pl-8 h-9 text-xs rounded-xl border-slate-200 bg-slate-50/50 focus:bg-white"
               />
             </div>
+
+            <Select value={statusFilter} onValueChange={setStatusFilter}>
+              <SelectTrigger className="h-9 w-32 rounded-xl border-slate-200 text-xs font-semibold text-slate-700 bg-white">
+                <Filter className="mr-1.5 h-3.5 w-3.5 text-slate-400" />
+                <SelectValue placeholder="All Status" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Status</SelectItem>
+                <SelectItem value="overdue">Overdue</SelectItem>
+                <SelectItem value="due_soon">Due Soon</SelectItem>
+                <SelectItem value="settled">Settled</SelectItem>
+              </SelectContent>
+            </Select>
           </div>
-        </CardHeader>
+        </div>
 
-        <CardContent className="p-0">
-          <Table>
-            <TableHeader>
-              <TableRow className="bg-slate-50/80 hover:bg-slate-50/80">
-                <TableHead className="text-xs font-bold text-slate-700">Patient Details</TableHead>
-                <TableHead className="text-xs font-bold text-slate-700">Program & Notes</TableHead>
-                <TableHead className="text-xs font-bold text-slate-700">Amount Paid</TableHead>
-                <TableHead className="text-xs font-bold text-slate-700">Pending Balance</TableHead>
-                <TableHead className="text-xs font-bold text-slate-700">Status</TableHead>
-                <TableHead className="text-xs font-bold text-slate-700 text-right">Action</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {filteredItems.map((item) => (
-                <TableRow
-                  key={item.id}
-                  className={
-                    item.isEnrollmentTokenOnly
-                      ? "bg-amber-50/40 hover:bg-amber-50/70 border-l-4 border-l-amber-500"
-                      : "hover:bg-slate-50/60"
-                  }
-                >
-                  <TableCell>
-                    <div className="flex items-center gap-2">
-                      <div>
+        {/* TAB 1: ACTIVE RECOVERY TABLE (Screenshot 1 Match) */}
+        <TabsContent value="active_recovery" className="m-0">
+          <div className="rounded-3xl border border-slate-200/80 bg-white shadow-sm overflow-hidden">
+            <div className="overflow-x-auto">
+              <Table>
+                <TableHeader className="bg-[#0B1528]">
+                  <TableRow className="bg-[#0B1528] hover:bg-[#0B1528] border-none">
+                    <TableHead className="text-[11px] font-bold text-white uppercase tracking-wider">
+                      PATIENT
+                    </TableHead>
+                    <TableHead className="text-[11px] font-bold text-white uppercase tracking-wider">
+                      PATIENT ID
+                    </TableHead>
+                    <TableHead className="text-[11px] font-bold text-white uppercase tracking-wider">
+                      PROGRAM
+                    </TableHead>
+                    <TableHead className="text-[11px] font-bold text-white uppercase tracking-wider">
+                      PHASE PROGRESS
+                    </TableHead>
+                    <TableHead className="text-[11px] font-bold text-white uppercase tracking-wider">
+                      DUE DATE
+                    </TableHead>
+                    <TableHead className="text-[11px] font-bold text-white uppercase tracking-wider">
+                      PENDING AMOUNT
+                    </TableHead>
+                    <TableHead className="text-[11px] font-bold text-white uppercase tracking-wider">
+                      STATUS
+                    </TableHead>
+                    <TableHead className="text-[11px] font-bold text-white uppercase tracking-wider text-right">
+                      ACTIONS
+                    </TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {filteredPatients.map((patient) => (
+                    <TableRow
+                      key={patient.id}
+                      className="hover:bg-slate-50/70 border-b border-slate-100"
+                    >
+                      {/* PATIENT */}
+                      <TableCell>
                         <Link
-                          href={`/dashboard/telecaller/payment-recovery/${item.id}`}
-                          className="text-xs font-bold text-slate-900 hover:text-[#1F56A3] hover:underline"
+                          href={`/dashboard/telecaller/payment-recovery/${patient.id}`}
+                          className="hover:underline"
                         >
-                          {item.name}
+                          <p className="text-xs font-bold text-slate-900">{patient.name}</p>
                         </Link>
-                        <p className="text-[11px] text-slate-500">{item.phone} · {item.id}</p>
-                      </div>
-                      {item.isEnrollmentTokenOnly && (
-                        <Badge className="bg-amber-100 text-amber-900 text-[9px] font-bold">
-                          Token Paid ₹2,499
-                        </Badge>
-                      )}
-                    </div>
-                  </TableCell>
-                  <TableCell>
-                    <p className="text-xs font-bold text-slate-800">{item.programName}</p>
-                    {item.doctorNotes && (
-                      <p className="text-[10px] text-slate-500 italic line-clamp-1">
-                        {item.doctorName}: "{item.doctorNotes}"
-                      </p>
-                    )}
-                  </TableCell>
-                  <TableCell>
-                    <span className="text-xs font-bold text-emerald-600">
-                      ₹{item.amountPaidSoFar.toLocaleString("en-IN")}
-                    </span>
-                  </TableCell>
-                  <TableCell>
-                    <span className="text-xs font-bold text-rose-600">
-                      ₹{item.pendingBalance.toLocaleString("en-IN")}
-                    </span>
-                  </TableCell>
-                  <TableCell>
-                    {item.status === "pending_program_mapping" ? (
-                      <Badge className="bg-amber-100 text-amber-900 border border-amber-300 text-[10px] font-bold">
-                        Pending Program Mapping
-                      </Badge>
-                    ) : item.status === "paid" ? (
-                      <Badge className="bg-emerald-100 text-emerald-800 text-[10px] font-bold">
-                        Settled
-                      </Badge>
-                    ) : (
-                      <Badge variant="outline" className="border-rose-200 text-rose-700 bg-rose-50 text-[10px] font-bold">
-                        {item.dueDate}
-                      </Badge>
-                    )}
-                  </TableCell>
-                  <TableCell className="text-right">
-                    <div className="flex items-center justify-end gap-2">
-                      <Link href={`/dashboard/telecaller/payment-recovery/${item.id}`}>
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          className="h-8 text-xs font-bold rounded-xl border-slate-200 text-slate-700 hover:bg-slate-100"
-                        >
-                          <Eye className="mr-1 h-3.5 w-3.5 text-slate-500" />
-                          View Details
-                        </Button>
-                      </Link>
+                        <p className="text-[11px] text-slate-500 font-medium">{patient.phone}</p>
+                        <p className="text-[10px] text-slate-400 truncate max-w-[160px]">{patient.email}</p>
+                      </TableCell>
 
-                      {item.status === "pending_program_mapping" ? (
+                      {/* PATIENT ID */}
+                      <TableCell className="font-mono text-xs font-semibold text-slate-700">
+                        <Link
+                          href={`/dashboard/telecaller/payment-recovery/${patient.id}`}
+                          className="hover:text-blue-600 hover:underline"
+                        >
+                          {patient.id}
+                        </Link>
+                      </TableCell>
+
+                      {/* PROGRAM */}
+                      <TableCell>
+                        <p className="text-xs font-bold text-slate-800">{patient.programName}</p>
+                        <p className="text-[10px] text-slate-500">{patient.tier} • {patient.specialty}</p>
+                      </TableCell>
+
+                      {/* PHASE PROGRESS */}
+                      <TableCell>
+                        <div className="space-y-1">
+                          <p className="text-xs font-bold text-slate-800">
+                            {patient.phaseNumber}/{patient.totalPhases}
+                          </p>
+                          <div className="w-24 h-1.5 rounded-full bg-slate-100 overflow-hidden">
+                            <div
+                              className={`h-full ${
+                                patient.status === "settled"
+                                  ? "bg-emerald-500"
+                                  : "bg-rose-500"
+                              }`}
+                              style={{ width: `${(patient.phaseNumber / patient.totalPhases) * 100}%` }}
+                            />
+                          </div>
+                          <p className="text-[10px] text-slate-500">{patient.phaseProgressText}</p>
+                        </div>
+                      </TableCell>
+
+                      {/* DUE DATE */}
+                      <TableCell>
+                        <div className="space-y-1">
+                          <p className="text-xs font-medium text-slate-800 flex items-center gap-1">
+                            <Calendar className="h-3 w-3 text-rose-500" />
+                            {patient.dueDateFormatted}
+                          </p>
+                          {patient.overdueDays > 0 ? (
+                            <span className="inline-block px-2 py-0.5 rounded-full text-[9px] font-bold bg-rose-50 text-rose-700 border border-rose-200">
+                              {patient.overdueDays} DAYS OVERDUE
+                            </span>
+                          ) : (
+                            <span className="inline-block px-2 py-0.5 rounded-full text-[9px] font-bold bg-amber-50 text-amber-700 border border-amber-200">
+                              Due Soon
+                            </span>
+                          )}
+                        </div>
+                      </TableCell>
+
+                      {/* PENDING AMOUNT */}
+                      <TableCell>
+                        <span
+                          className={`text-xs font-bold ${
+                            patient.status === "settled" ? "text-emerald-600" : "text-rose-600"
+                          }`}
+                        >
+                          ₹{patient.pendingAmount.toLocaleString("en-IN")}
+                        </span>
+                      </TableCell>
+
+                      {/* STATUS */}
+                      <TableCell>
+                        {patient.status === "settled" ? (
+                          <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-[10px] font-bold border border-emerald-500 text-emerald-600 bg-emerald-50/70">
+                            <CheckCircle2 className="mr-1 h-3 w-3" />
+                            PAID
+                          </span>
+                        ) : patient.status === "overdue" ? (
+                          <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-[10px] font-bold border border-rose-300 text-rose-600 bg-rose-50">
+                            <AlertTriangle className="mr-1 h-3 w-3" />
+                            OVERDUE
+                          </span>
+                        ) : (
+                          <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-[10px] font-bold border border-amber-300 text-amber-700 bg-amber-50">
+                            <Clock className="mr-1 h-3 w-3" />
+                            DUE SOON
+                          </span>
+                        )}
+                      </TableCell>
+
+                      {/* ACTIONS */}
+                      <TableCell className="text-right">
+                        {patient.status === "settled" ? (
+                          <span className="text-xs font-bold text-emerald-600 flex items-center justify-end gap-1">
+                            <CheckCircle2 className="h-3.5 w-3.5" />
+                            Phase 2 Settled
+                          </span>
+                        ) : (
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => handleOpenPay(patient)}
+                            className="h-8 px-3.5 rounded-full border-emerald-500 text-emerald-700 hover:bg-emerald-50 text-xs font-bold gap-1.5 shadow-sm"
+                          >
+                            <Banknote className="h-3.5 w-3.5 text-emerald-600" />
+                            Pay
+                          </Button>
+                        )}
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
+          </div>
+        </TabsContent>
+
+        {/* TAB 2: PENDING PROGRAM MAPPING (Token ₹2,499 Paid) */}
+        <TabsContent value="pending_mapping" className="m-0">
+          <div className="rounded-3xl border border-slate-200/80 bg-white shadow-sm overflow-hidden">
+            <div className="p-5 border-b border-slate-100 bg-amber-50/30">
+              <h3 className="text-sm font-bold text-amber-900 flex items-center gap-2">
+                <Layers className="h-4 w-4 text-amber-600" />
+                Patients Awaiting Agreed Program Mapping
+              </h3>
+              <p className="text-xs text-amber-700/80 mt-0.5">
+                Patients who have paid the ₹2,499 enrollment token. Coordinate with doctor recommendation, select agreed protocol, and deduct token fee.
+              </p>
+            </div>
+
+            <div className="overflow-x-auto">
+              <Table>
+                <TableHeader className="bg-[#0B1528]">
+                  <TableRow className="bg-[#0B1528] hover:bg-[#0B1528] border-none">
+                    <TableHead className="text-[11px] font-bold text-white uppercase tracking-wider">
+                      PATIENT
+                    </TableHead>
+                    <TableHead className="text-[11px] font-bold text-white uppercase tracking-wider">
+                      DOCTOR RECOMMENDATION
+                    </TableHead>
+                    <TableHead className="text-[11px] font-bold text-white uppercase tracking-wider">
+                      TOKEN PAID
+                    </TableHead>
+                    <TableHead className="text-[11px] font-bold text-white uppercase tracking-wider">
+                      NET BALANCE
+                    </TableHead>
+                    <TableHead className="text-[11px] font-bold text-white uppercase tracking-wider">
+                      STATUS
+                    </TableHead>
+                    <TableHead className="text-[11px] font-bold text-white uppercase tracking-wider text-right">
+                      ACTION
+                    </TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {mappingPatients.map((patient) => (
+                    <TableRow key={patient.id} className="hover:bg-slate-50/70 border-b border-slate-100">
+                      <TableCell>
+                        <p className="text-xs font-bold text-slate-900">{patient.name}</p>
+                        <p className="text-[11px] text-slate-500">{patient.phone}</p>
+                        <p className="text-[10px] text-slate-400 font-mono">{patient.id}</p>
+                      </TableCell>
+
+                      <TableCell>
+                        <p className="text-xs font-bold text-slate-800">{patient.programName}</p>
+                        <p className="text-[10px] text-slate-500 italic max-w-sm line-clamp-1">
+                          {patient.doctorName}: "{patient.doctorNotes}"
+                        </p>
+                      </TableCell>
+
+                      <TableCell>
+                        <Badge className="bg-amber-100 text-amber-900 border-amber-200 text-xs font-bold">
+                          ₹2,499 Token Paid
+                        </Badge>
+                      </TableCell>
+
+                      <TableCell>
+                        <span className="text-xs font-bold text-slate-900">
+                          ₹{patient.pendingAmount.toLocaleString("en-IN")}
+                        </span>
+                      </TableCell>
+
+                      <TableCell>
+                        <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-50 text-amber-800 border border-amber-300">
+                          Pending Mapping
+                        </span>
+                      </TableCell>
+
+                      <TableCell className="text-right">
                         <Button
                           size="sm"
                           onClick={() => {
-                            setActivePatient(item)
-                            setIsMappingOpen(true)
+                            setActiveMappingPatient(patient)
+                            setIsMappingModalOpen(true)
                           }}
                           className="h-8 text-xs font-bold rounded-xl bg-amber-600 hover:bg-amber-700 text-white shadow-sm"
                         >
                           <Layers className="mr-1 h-3.5 w-3.5" />
                           Map Agreed Program
                         </Button>
-                      ) : (
-                        <Button
-                          size="sm"
-                          onClick={() => {
-                            setActivePatient(item)
-                            setIsPaymentOpen(true)
-                          }}
-                          className="h-8 text-xs font-bold rounded-xl bg-[#1F56A3] hover:bg-[#192B42] text-white shadow-sm"
-                        >
-                          <IndianRupee className="mr-1 h-3.5 w-3.5" />
-                          Pay Now / Invoices
-                        </Button>
-                      )}
-                    </div>
-                  </TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        </CardContent>
-      </Card>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
+          </div>
+        </TabsContent>
+      </Tabs>
 
-      {/* Modals */}
-      {activePatient && (
-        <ProgramMappingModal
-          open={isMappingOpen}
-          onOpenChange={setIsMappingOpen}
-          patientId={activePatient.id}
-          patientName={activePatient.name}
-          doctorName={activePatient.doctorName}
-          doctorRecommendation={{
-            program: activePatient.programName,
-            fee: activePatient.totalPlanValue,
-            notes: activePatient.doctorNotes || "Doctor recommended intensive reversal care.",
-          }}
-          enrollmentFeePaid={activePatient.amountPaidSoFar}
-          onConfirm={handleConfirmMapping}
+      {/* Collect Payment Modal (Screenshot 2 Match) */}
+      {activePaymentPatient && (
+        <CollectPaymentModal
+          open={isPaymentModalOpen}
+          onOpenChange={setIsPaymentModalOpen}
+          patientId={activePaymentPatient.id}
+          patientName={activePaymentPatient.name}
+          patientPhone={activePaymentPatient.phone}
+          programName={activePaymentPatient.programName}
+          totalPlanValue={activePaymentPatient.totalPlanValue}
+          amountPaidSoFar={activePaymentPatient.paidSoFar}
+          pendingBalance={activePaymentPatient.pendingAmount}
+          installmentNumber={2}
+          phase1Amount={activePaymentPatient.paidSoFar || 1899}
+          phase2Amount={activePaymentPatient.pendingAmount || 13101}
+          onPaymentSuccess={handleRecordPaymentSuccess}
         />
       )}
 
-      {activePatient && (
-        <CollectPaymentModal
-          open={isPaymentOpen}
-          onOpenChange={setIsPaymentOpen}
-          patientId={activePatient.id}
-          patientName={activePatient.name}
-          patientPhone={activePatient.phone}
-          programName={activePatient.programName}
-          totalPlanValue={activePatient.totalPlanValue}
-          amountPaidSoFar={activePatient.amountPaidSoFar}
-          pendingBalance={activePatient.pendingBalance}
-          installmentNumber={activePatient.installmentNumber}
-          onPaymentSuccess={handleRecordPayment}
+      {/* Program Mapping Modal */}
+      {activeMappingPatient && (
+        <ProgramMappingModal
+          open={isMappingModalOpen}
+          onOpenChange={setIsMappingModalOpen}
+          patientId={activeMappingPatient.id}
+          patientName={activeMappingPatient.name}
+          doctorName={activeMappingPatient.doctorName}
+          doctorRecommendation={{
+            program: activeMappingPatient.programName,
+            fee: activeMappingPatient.totalPlanValue,
+            notes: activeMappingPatient.doctorNotes || "Doctor advised intensive reversal protocol.",
+          }}
+          enrollmentFeePaid={activeMappingPatient.paidSoFar}
+          onConfirm={handleConfirmMapping}
         />
       )}
     </div>
